@@ -1,0 +1,9 @@
+# MAC OS
+*.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+
+# Build directories
+build/
