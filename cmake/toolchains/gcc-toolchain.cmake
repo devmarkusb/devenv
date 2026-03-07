@@ -15,8 +15,6 @@ if(MB_SANITIZER STREQUAL "MaxSan")
     )
 elseif(MB_SANITIZER STREQUAL "TSan")
     set(SANITIZER_FLAGS "-fsanitize=thread")
-elseif(MB_SANITIZER STREQUAL "MSan")
-    set(SANITIZER_FLAGS "-fsanitize=memory")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG_INIT "${SANITIZER_FLAGS}")
@@ -31,4 +29,4 @@ set(CMAKE_C_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 
 # Add this dir to the module path so that `find_package(your-install-library)` works
-list(APPEND CMAKE_PREFIX_PATH "..")
+list(APPEND CMAKE_PREFIX_PATH "../..")
