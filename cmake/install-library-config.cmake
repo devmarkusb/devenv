@@ -157,7 +157,7 @@ function(mb_install_library name)
         install(
             EXPORT "${export_name}"
             DESTINATION "${package_install_dir}"
-            NAMESPACE "${namespace}"::
+            NAMESPACE "${namespace}::"
             FILE "${config_targets_file}"
             COMPONENT "${install_component_name}"
         )
