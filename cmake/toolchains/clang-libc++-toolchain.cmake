@@ -4,7 +4,7 @@
 # }
 # You can also set MB_SANITIZER as cache var (see below for allowed values).
 
-include(clang-toolchain.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/clang-toolchain.cmake)
 
 if(NOT CMAKE_CXX_FLAGS MATCHES "-stdlib=libc\\+\\+")
     string(APPEND CMAKE_CXX_FLAGS " -stdlib=libc++")
