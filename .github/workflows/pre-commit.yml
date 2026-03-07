@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,6 +45,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
         # pull_request_target checkout the base of the repo
         # We need to checkout the actual pr to lint the changes.
