@@ -17,7 +17,7 @@ elseif(MB_SANITIZER STREQUAL "TSan")
     set(SANITIZER_FLAGS "-fsanitize=thread")
 elseif(MB_SANITIZER STREQUAL "MSan")
     set(ENV{MSAN_OPTIONS} "suppressions=${CMAKE_SOURCE_DIR}/devenv/cmake/toolchains/msan.supp")
-    set(SANITIZER_FLAGS "-fsanitize=memory MSAN_OPTIONS=suppressions=${CMAKE_CURRENT_LIST_DIR}/msan.supp")
+    set(SANITIZER_FLAGS "-fsanitize=memory")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG_INIT "${SANITIZER_FLAGS}")
