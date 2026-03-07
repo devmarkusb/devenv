@@ -62,7 +62,7 @@ function(mb_install_library name)
     set(export_name "${name}")
     set(package_name "${name}")
     list(GET name_parts -1 component_name)
-    list(GET name_parts 1 namespace)
+    list(GET name_parts 0 namespace)
 
     install(
         TARGETS "${target_name}"
