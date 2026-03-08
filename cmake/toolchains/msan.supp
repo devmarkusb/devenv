@@ -1,2 +1,2 @@
-fun:*testing::*
-src:*gtest*
+src:.*gtest-all\.cc
+fun:testing::internal::FlagToEnvVar*
