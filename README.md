@@ -54,6 +54,25 @@ Or use the convenience script (same directory):
 - **Devenv’s own config:** `devenv/.pre-commit-config.yaml` is a minimal config used when working inside the devenv
   repo (e.g. gersemi, codespell, YAML checks). Consumer projects use their own config at the repo root.
 
+#### Syncing .clang-format from devmarkusb/clangformat
+
+To use a shared clang-format config (optionally versioned per clang-format major), run the script **from inside the
+`devenv` directory** (so path resolution works):
+
+```bash
+cd devenv && ./sync-clang-format.sh [VERSION]
+```
+
+- **VERSION** (optional): clang-format major (e.g. `14`, `22`). Default: from `.pre-commit-config.yaml` (mirrors-clang-format
+  `rev`) or `22`.
+- Overwrites the project repo root `.clang-format`. Fetches `configs/v<VERSION>/.clang-format` from the clangformat repo,
+  or the repo root `.clang-format` if that path doesn’t exist.
+- Env overrides: `CLANGFORMAT_REPO`, `CLANGFORMAT_BRANCH`, `CLANGFORMAT_VERSION`.
+
+The folder **`devenv/clangformat-configs/`** holds versioned configs (`configs/v14/`, `configs/v22/`) to copy into
+[devmarkusb/clangformat](https://github.com/devmarkusb/clangformat) so that repo can serve them. See
+`devenv/clangformat-configs/README.md`.
+
 ### cmake
 
 #### Toolchains (`cmake/toolchains/`)
