@@ -5,5 +5,5 @@
 .vscode/
 .idea/
 
-# Build directories
-build/
+# python
+.venv
