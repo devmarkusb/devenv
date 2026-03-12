@@ -98,9 +98,7 @@ function(mb_install_library name)
     # 2. The package name is not in the list of packages to install config files
     if(DEFINED MB_INSTALL_CONFIG_FILE_PACKAGES)
         if(
-            NOT "${install_component_name}"
-                IN_LIST
-                MB_INSTALL_CONFIG_FILE_PACKAGES
+            NOT "${install_component_name}" IN_LIST MB_INSTALL_CONFIG_FILE_PACKAGES
         )
             set(install_config_package OFF)
         endif()

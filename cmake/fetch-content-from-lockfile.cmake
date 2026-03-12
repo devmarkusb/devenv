@@ -21,7 +21,10 @@ file(
     BASE_DIRECTORY "${consumer_project_dir}"
     EXPAND_TILDE
 )
-message(DEBUG "Using FetchContent lockfile: \"${consumer_fetchcontent_lockfile}\"")
+message(
+    DEBUG
+    "Using FetchContent lockfile: \"${consumer_fetchcontent_lockfile}\""
+)
 
 # Force CMake to reconfigure the project if the lockfile changes
 set_property(
@@ -80,25 +83,13 @@ function(mb_fetchcontent_provide_dependency method package_name)
             "${index}"
         )
         if(error)
-            message(
-                FATAL_ERROR
-                "${error_prefix}: ${error}"
-            )
+            message(FATAL_ERROR "${error_prefix}: ${error}")
         endif()
 
         # Get the "name" field and store it in name
-        string(
-            JSON
-            name
-            ERROR_VARIABLE error
-            GET "${dep_obj}"
-            "name"
-        )
+        string(JSON name ERROR_VARIABLE error GET "${dep_obj}" "name")
         if(error)
-            message(
-                FATAL_ERROR
-                "${error_prefix}: ${error}"
-            )
+            message(FATAL_ERROR "${error_prefix}: ${error}")
         endif()
 
         # Get the "package_name" field and store it in pkg_name
@@ -110,40 +101,19 @@ function(mb_fetchcontent_provide_dependency method package_name)
             "package_name"
         )
         if(error)
-            message(
-                FATAL_ERROR
-                "${error_prefix}: ${error}"
-            )
+            message(FATAL_ERROR "${error_prefix}: ${error}")
         endif()
 
         # Get the "git_repository" field and store it in repo
-        string(
-            JSON
-            repo
-            ERROR_VARIABLE error
-            GET "${dep_obj}"
-            "git_repository"
-        )
+        string(JSON repo ERROR_VARIABLE error GET "${dep_obj}" "git_repository")
         if(error)
-            message(
-                FATAL_ERROR
-                "${error_prefix}: ${error}"
-            )
+            message(FATAL_ERROR "${error_prefix}: ${error}")
         endif()
 
         # Get the "git_tag" field and store it in tag
-        string(
-            JSON
-            tag
-            ERROR_VARIABLE error
-            GET "${dep_obj}"
-            "git_tag"
-        )
+        string(JSON tag ERROR_VARIABLE error GET "${dep_obj}" "git_tag")
         if(error)
-            message(
-                FATAL_ERROR
-                "${error_prefix}: ${error}"
-            )
+            message(FATAL_ERROR "${error_prefix}: ${error}")
         endif()
 
         if(method STREQUAL "FIND_PACKAGE")
