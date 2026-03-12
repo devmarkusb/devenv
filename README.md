@@ -49,7 +49,7 @@ Or use the convenience script (same directory):
 
 - **Bootstrap:** `devenv/bootstrap.sh` sets up a venv and installs pre-commit in your project; hooks are defined by the
   project’s root `.pre-commit-config.yaml`.
-- **Run on all files:**  
+- **Run on all files:**
   `pre-commit run --all-files`
 - **Devenv’s own config:** `devenv/.pre-commit-config.yaml` is a minimal config used when working inside the devenv
   repo (e.g. gersemi, codespell, YAML checks). Consumer projects use their own config at the repo root.
