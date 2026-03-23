@@ -160,7 +160,7 @@ cmake_language(
     SUPPORTED_METHODS FIND_PACKAGE
 )
 
-# Add this dir to the module path so that `find_package(your-install-library)` works
+# Add this dir to the module path so that `find_package(...)` works
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
 else()
