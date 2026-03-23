@@ -8,9 +8,9 @@ submodule** to your project repo.
 From your project repo root, add devenv as a submodule (SSH or HTTPS):
 
 ```bash
-git submodule add git@github.com:devmarkusb/devenv.git devenv
-# or
 git submodule add https://github.com/devmarkusb/devenv.git devenv
+# or (less preferable, permission issues for ci)
+git submodule add git@github.com:devmarkusb/devenv.git devenv
 ```
 
 Then run the bootstrap script **from the project repo root** (so `.venv` is created there and pre-commit hooks apply to
