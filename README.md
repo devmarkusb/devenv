@@ -113,7 +113,7 @@ Lockfile format: a JSON object with a `dependencies` array; each entry has `name
 #### install-library-config.cmake
 
 Defines **`mb_install_library(name)`** for header-only/INTERFACE libraries. Call it with a target name of the form
-`namespace.library-name` (e.g. `mb.cpp-lib-template`). It:
+`namespace.library-name` (e.g. `mb.cpp-lib-template-header-only`). It:
 
 - Installs the target and its `FILE_SET HEADERS`.
 - Optionally installs a CMake config-file package (so consumers can `find_package(...)`) using a template
