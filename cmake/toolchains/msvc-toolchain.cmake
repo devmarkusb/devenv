@@ -2,14 +2,14 @@
 # "cacheVariables": {
 #     "CMAKE_TOOLCHAIN_FILE": "devenv/cmake/toolchains/...-toolchain.cmake"
 # }
-# You can also set MB_SANITIZER as cache var (see below for allowed values).
+# You can also set MB_DEVENV_SANITIZER as cache var (see below for allowed values).
 
 include_guard(GLOBAL)
 
 set(CMAKE_C_COMPILER cl)
 set(CMAKE_CXX_COMPILER cl)
 
-if(MB_SANITIZER STREQUAL "MaxSan")
+if(MB_DEVENV_SANITIZER STREQUAL "MaxSan")
     # /Zi flag (add debug symbol) is needed when using address sanitizer
     # See C5072: https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-c5072
     set(SANITIZER_FLAGS "/fsanitize=address /Zi")

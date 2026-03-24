@@ -2,20 +2,20 @@
 # "cacheVariables": {
 #     "CMAKE_TOOLCHAIN_FILE": "devenv/cmake/toolchains/...-toolchain.cmake"
 # }
-# You can also set MB_SANITIZER as cache var (see below for allowed values).
+# You can also set MB_DEVENV_SANITIZER as cache var (see below for allowed values).
 
 include_guard(GLOBAL)
 
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 
-if(MB_SANITIZER STREQUAL "MaxSan")
+if(MB_DEVENV_SANITIZER STREQUAL "MaxSan")
     set(SANITIZER_FLAGS
         "-fsanitize=address -fsanitize=leak -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize-undefined-trap-on-error"
     )
-elseif(MB_SANITIZER STREQUAL "TSan")
+elseif(MB_DEVENV_SANITIZER STREQUAL "TSan")
     set(SANITIZER_FLAGS "-fsanitize=thread")
-elseif(MB_SANITIZER STREQUAL "MSan")
+elseif(MB_DEVENV_SANITIZER STREQUAL "MSan")
     set(ENV{MSAN_OPTIONS}
         "suppressions=${CMAKE_SOURCE_DIR}/devenv/cmake/toolchains/msan.supp"
     )

@@ -87,7 +87,7 @@ CMake toolchain files for use with presets or `-DCMAKE_TOOLCHAIN_FILE=...`:
 | `appleclang-toolchain.cmake`   | Apple Clang (cc/c++)  | macOS                                           |
 | `msvc-toolchain.cmake`         | MSVC (cl)             | Windows                                         |
 
-Optional **sanitizers** via cache variable `MB_SANITIZER`:
+Optional **sanitizers** via cache variable `MB_DEVENV_SANITIZER`:
 
 - **MaxSan** — Address, leak, pointer-compare/subtract, undefined (and on MSVC, address only).
 - **TSan** — Thread sanitizer.
