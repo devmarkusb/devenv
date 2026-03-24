@@ -47,7 +47,7 @@ Or use the convenience script (same directory):
 
 ### pre-commit
 
-- **Bootstrap:** `devenv/bootstrap.sh` sets up a venv and installs pre-commit in your project; hooks are defined by the
+- **Bootstrap:** `./devenv/bootstrap.sh` sets up a venv and installs pre-commit in your project; hooks are defined by the
   project’s root `.pre-commit-config.yaml`.
 - **Run on all files:**
   `pre-commit run --all-files`
