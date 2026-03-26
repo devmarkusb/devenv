@@ -110,7 +110,7 @@ CMake **dependency provider** (CMake 3.24+). Include it as a top-level include (
 Lockfile format: a JSON object with a `dependencies` array; each entry has `name`, `package_name`, `git_repository`,
 `git_tag`. This gives reproducible builds without relying on system packages (e.g. GTest).
 
-#### install-library-config.cmake
+#### mb-devenv-install-library-config.cmake
 
 Defines **`mb_devenv_install_library(name)`** for header-only/INTERFACE libraries. Call it with a target name of the form
 `namespace.library-name` (e.g. `mb.cpp-lib-template-header-only`). It:
