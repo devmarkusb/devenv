@@ -1,16 +1,16 @@
 include_guard(GLOBAL)
 
-# This file defines the function `mb_install_library` which is used to
+# This file defines the function `mb_devenv_install_library` which is used to
 # install a library target and its headers, along with optional CMake
 # configuration files.
 #
 # The function is designed to be reusable across different libraries.
 
-function(mb_install_library name)
+function(mb_devenv_install_library name)
     # Usage
     # -----
     #
-    #     mb_install_library(NAME)
+    #     mb_devenv_install_library(NAME)
     #
     # Brief
     # -----
@@ -26,7 +26,7 @@ function(mb_install_library name)
     # `cmake` command. Neither `CMakeLists.txt` nor `*.cmake` files should set these
     # variables directly.
     #
-    # - MB_INSTALL_CONFIG_FILE_PACKAGES:
+    # - MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES:
     #      List of packages that require config file installation.
     #      If the package name is in this list, it will install the config file.
     #
@@ -42,7 +42,7 @@ function(mb_install_library name)
     if(NOT ARGN STREQUAL "")
         message(
             FATAL_ERROR
-            "mb_install_library does not accept extra arguments: ${ARGN}"
+            "mb_devenv_install_library does not accept extra arguments: ${ARGN}"
         )
     endif()
 
@@ -53,7 +53,7 @@ function(mb_install_library name)
     if(NOT name_parts_length EQUAL 2)
         message(
             FATAL_ERROR
-            "mb_install_library expects a name of the form '<your>.<lib>', got '${name}'"
+            "mb_devenv_install_library expects a name of the form '<your>.<lib>', got '${name}'"
         )
     endif()
 
@@ -96,9 +96,9 @@ function(mb_install_library name)
     # in order of precedence:
     # 1. The specific package variable is set to OFF
     # 2. The package name is not in the list of packages to install config files
-    if(DEFINED MB_INSTALL_CONFIG_FILE_PACKAGES)
+    if(DEFINED MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES)
         if(
-            NOT "${install_component_name}" IN_LIST MB_INSTALL_CONFIG_FILE_PACKAGES
+            NOT "${install_component_name}" IN_LIST MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES
         )
             set(install_config_package OFF)
         endif()
@@ -112,7 +112,7 @@ function(mb_install_library name)
     if(install_config_package)
         message(
             DEBUG
-            "mb_install_library: Installing a config package for '${name}'"
+            "mb_devenv_install_library: Installing a config package for '${name}'"
         )
 
         include(CMakePackageConfigHelpers)
@@ -162,7 +162,7 @@ function(mb_install_library name)
     else()
         message(
             DEBUG
-            "mb_install_library: Not installing a config package for '${name}'"
+            "mb_devenv_install_library: Not installing a config package for '${name}'"
         )
     endif()
 endfunction()

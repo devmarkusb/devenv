@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 include(FetchContent)
 
-if(NOT MB_FETCHCONTENT_LOCKFILE)
-    set(MB_FETCHCONTENT_LOCKFILE
+if(NOT MB_DEVENV_FETCHCONTENT_LOCKFILE)
+    set(MB_DEVENV_FETCHCONTENT_LOCKFILE
         "fetchcontent-lockfile.json"
         CACHE FILEPATH
         "Path to the dependency lockfile for the FetchContent."
@@ -14,16 +14,16 @@ set(consumer_project_dir "${CMAKE_CURRENT_LIST_DIR}/../..")
 message(TRACE "consumer_project_dir=\"${consumer_project_dir}\"")
 
 # Resolve lockfile path for existence check (support relative to consumer or absolute)
-set(lockfile_candidate "${consumer_project_dir}/${MB_FETCHCONTENT_LOCKFILE}")
-if(IS_ABSOLUTE "${MB_FETCHCONTENT_LOCKFILE}")
-    set(lockfile_candidate "${MB_FETCHCONTENT_LOCKFILE}")
+set(lockfile_candidate "${consumer_project_dir}/${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
+if(IS_ABSOLUTE "${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
+    set(lockfile_candidate "${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
 endif()
 
 if(EXISTS "${lockfile_candidate}")
-    message(TRACE "MB_FETCHCONTENT_LOCKFILE=\"${MB_FETCHCONTENT_LOCKFILE}\"")
+    message(TRACE "MB_DEVENV_FETCHCONTENT_LOCKFILE=\"${MB_DEVENV_FETCHCONTENT_LOCKFILE}\"")
     file(
         REAL_PATH
-        "${MB_FETCHCONTENT_LOCKFILE}"
+        "${MB_DEVENV_FETCHCONTENT_LOCKFILE}"
         consumer_fetchcontent_lockfile
         BASE_DIRECTORY "${consumer_project_dir}"
         EXPAND_TILDE
@@ -42,7 +42,7 @@ if(EXISTS "${lockfile_candidate}")
 
     # For more on the protocol for this function, see:
     # https://cmake.org/cmake/help/latest/command/cmake_language.html#provider-commands
-    function(mb_fetchcontent_provide_dependency method package_name)
+    function(mb_devenv_fetchcontent_provide_dependency method package_name)
         # Read the lockfile
         file(READ "${consumer_fetchcontent_lockfile}" root_obj)
 
@@ -162,7 +162,7 @@ if(EXISTS "${lockfile_candidate}")
     endfunction()
 
     cmake_language(
-        SET_DEPENDENCY_PROVIDER mb_fetchcontent_provide_dependency
+        SET_DEPENDENCY_PROVIDER mb_devenv_fetchcontent_provide_dependency
         SUPPORTED_METHODS FIND_PACKAGE
     )
 

@@ -102,7 +102,7 @@ CMake **dependency provider** (CMake 3.24+). Include it as a top-level include (
 `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` in presets). It:
 
 - Reads a JSON lockfile from the **consumer project** (default: `fetchcontent-lockfile.json` in the project root;
-  override with `MB_FETCHCONTENT_LOCKFILE`).
+  override with `MB_DEVENV_FETCHCONTENT_LOCKFILE`).
 - Implements `FIND_PACKAGE`: when the project calls `find_package(PkgName)`, the provider can satisfy it by FetchContent
   using `git_repository` and `git_tag` from the lockfile.
 - Adds the lockfile to `CMAKE_CONFIGURE_DEPENDS` so CMake reconfigures when the lockfile changes.
@@ -112,13 +112,13 @@ Lockfile format: a JSON object with a `dependencies` array; each entry has `name
 
 #### install-library-config.cmake
 
-Defines **`mb_install_library(name)`** for header-only/INTERFACE libraries. Call it with a target name of the form
+Defines **`mb_devenv_install_library(name)`** for header-only/INTERFACE libraries. Call it with a target name of the form
 `namespace.library-name` (e.g. `mb.cpp-lib-template-header-only`). It:
 
 - Installs the target and its `FILE_SET HEADERS`.
 - Optionally installs a CMake config-file package (so consumers can `find_package(...)`) using a template
   `cmake/<name>-config.cmake.in`.
-- Config is controlled by `MB_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
+- Config is controlled by `MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
   per-library ON/OFF).
 
 ### .github/workflows
