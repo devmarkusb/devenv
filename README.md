@@ -118,7 +118,8 @@ Defines **`mb_devenv_install_library(name)`** for header-only/INTERFACE librarie
 - Installs the target and its `FILE_SET HEADERS`.
 - Optionally installs a CMake config-file package (so consumers can `find_package(...)`) using a template
   `cmake/<name>-config.cmake.in`.
-- Config is controlled by `MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
+- Config is controlled by
+  `MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
   per-library ON/OFF).
 
 ### .github/workflows

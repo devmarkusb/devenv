@@ -14,13 +14,18 @@ set(consumer_project_dir "${CMAKE_CURRENT_LIST_DIR}/../..")
 message(TRACE "consumer_project_dir=\"${consumer_project_dir}\"")
 
 # Resolve lockfile path for existence check (support relative to consumer or absolute)
-set(lockfile_candidate "${consumer_project_dir}/${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
+set(lockfile_candidate
+    "${consumer_project_dir}/${MB_DEVENV_FETCHCONTENT_LOCKFILE}"
+)
 if(IS_ABSOLUTE "${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
     set(lockfile_candidate "${MB_DEVENV_FETCHCONTENT_LOCKFILE}")
 endif()
 
 if(EXISTS "${lockfile_candidate}")
-    message(TRACE "MB_DEVENV_FETCHCONTENT_LOCKFILE=\"${MB_DEVENV_FETCHCONTENT_LOCKFILE}\"")
+    message(
+        TRACE
+        "MB_DEVENV_FETCHCONTENT_LOCKFILE=\"${MB_DEVENV_FETCHCONTENT_LOCKFILE}\""
+    )
     file(
         REAL_PATH
         "${MB_DEVENV_FETCHCONTENT_LOCKFILE}"
