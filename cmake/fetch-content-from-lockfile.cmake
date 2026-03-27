@@ -1,3 +1,7 @@
+# Recommended usage via
+# "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "./devenv/cmake/fetch-content-from-lockfile.cmake"
+# in cmake preset file.
+
 cmake_minimum_required(VERSION 3.24)
 
 include(FetchContent)
