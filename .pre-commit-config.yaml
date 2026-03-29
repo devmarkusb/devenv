@@ -1,3 +1,7 @@
+# Example config shipped with mb-pre-commit (see configs/v4). Edit freely; CMake may refresh
+# this file on configure unless you disable PRE_COMMIT_INSTALL_EXAMPLE_CONFIG.
+# https://pre-commit.com/
+minimum_pre_commit_version: '4.0.0'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -25,4 +29,4 @@ repos:
     hooks:
     - id: gersemi
       name: CMake linting
-      exclude: ^.*/tests/.*/data/ # Exclude test data directories
+      exclude: tests/.*/data/|cmake/mb-pre-commit\.cmake$
