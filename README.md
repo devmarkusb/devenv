@@ -135,3 +135,8 @@ Reusable workflow for **lint check (pre-commit)**. Main repo typically calls it 
   ** (action-suggester) to post suggested fixes as PR comments.
 
 Requires Python (e.g. 3.13) and, for PRs, `gh` and a token that can write checks and comments.
+
+### .gitignore
+
+Just as a sidenote, our .gitignore is overkill for this current repo but by the way provides a
+reasonable template default for C++ projects. So you might copy and paste.
