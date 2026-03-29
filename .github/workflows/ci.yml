@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cmake-workflow-ci:
+    name: CMake — workflow preset ci (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.3.0
+        with:
+          cmakeVersion: 3.28.6
+
+      - name: Install Ninja
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            command -v ninja >/dev/null || brew install ninja
+          fi
+
+      - name: Configure and build (workflow preset ci)
+        shell: bash
+        run: cmake --workflow --preset ci
+
+  cmake-workflow-dev:
+    name: CMake — workflow preset dev (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.3.0
+        with:
+          cmakeVersion: 3.28.6
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure and build (workflow preset dev)
+        run: cmake --workflow --preset dev
+
+  cmake-unix-makefiles:
+    name: CMake — Unix Makefiles (ubuntu, no Ninja)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.3.0
+        with:
+          cmakeVersion: 3.28.6
+
+      - name: Install Make
+        run: sudo apt-get update && sudo apt-get install -y make
+
+      - name: Configure and build (presets unix-makefiles)
+        run: |
+          cmake --preset unix-makefiles
+          cmake --build --preset unix-makefiles
+
+  cmake-clang-toolchain:
+    name: CMake — preset ci + clang toolchain (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.3.0
+        with:
+          cmakeVersion: 3.28.6
+
+      - name: Install Ninja and Clang
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang
+
+      - name: Configure and build
+        run: |
+          cmake --preset ci "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/cmake/toolchains/clang-toolchain.cmake"
+          cmake --build --preset ci
+
+  cmake-windows-vs2022:
+    name: CMake — VS 2022 (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.3.0
+        with:
+          cmakeVersion: 3.28.6
+
+      - name: MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure and build (presets vs2022 / vs2022-debug)
+        shell: pwsh
+        run: |
+          cmake --preset vs2022
+          cmake --build --preset vs2022-debug

@@ -1,5 +1,8 @@
 # devenv
 
+[![CI](https://github.com/devmarkusb/devenv/actions/workflows/ci.yml/badge.svg)](https://github.com/devmarkusb/devenv/actions/workflows/ci.yml)
+[![Lint](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit.yml)
+
 Basic must-haves for a convenient general infrastructure setup of C++ apps/libs. Intended to be added as a **git
 submodule** to your project repo.
 
@@ -123,6 +126,17 @@ Defines **`mb_devenv_install_library(name)`** for header-only/INTERFACE librarie
   per-library ON/OFF).
 
 ### .github/workflows
+
+#### ci.yml
+
+Runs on pushes to `main`, pull requests, and manual dispatch. Uses **CMake 3.28+** (workflow presets need 3.25+;
+`CMakePresets.json` still allows 3.24 for configure-only use). Jobs mirror `CMakePresets.json`:
+
+- **workflow preset `ci`** on Ubuntu and macOS (`cmake --workflow --preset ci`) — Ninja, Release, lockfile FetchContent.
+- **workflow preset `dev`** on Ubuntu — Ninja, Debug, same dependency path as local dev.
+- **presets `unix-makefiles`** on Ubuntu — `Unix Makefiles` generator without Ninja.
+- **`ci` + `cmake/toolchains/clang-toolchain.cmake`** on Ubuntu — exercises the Clang toolchain file with the `ci` preset.
+- **presets `vs2022` / `vs2022-debug`** on Windows — Visual Studio 2022, MSVC x64.
 
 #### pre-commit.yml
 
