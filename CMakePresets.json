@@ -1,0 +1,174 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "include": [],
+  "configurePresets": [
+    {
+      "name": ".devenv-base",
+      "hidden": true,
+      "description": "Shared: lockfile FetchContent hook + sane defaults",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "warnings": {
+        "dev": true,
+        "deprecated": true,
+        "unusedCli": true
+      },
+      "cacheVariables": {
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "${sourceDir}/cmake/fetch-content-from-lockfile.cmake",
+        "MB_DEVENV_ROOT": "${sourceDir}",
+        "CMAKE_MESSAGE_LOG_LEVEL": "STATUS"
+      }
+    },
+    {
+      "name": ".devenv-ninja",
+      "hidden": true,
+      "inherits": [".devenv-base"],
+      "generator": "Ninja",
+      "description": "Ninja — fast default for local and CI"
+    },
+    {
+      "name": ".devenv-make",
+      "hidden": true,
+      "inherits": [".devenv-base"],
+      "generator": "Unix Makefiles",
+      "description": "Unix Makefiles when Ninja is not installed"
+    },
+    {
+      "name": "default",
+      "displayName": "Default (Ninja, Debug)",
+      "description": "Daily driver: Ninja, Debug build type, lockfile FetchContent",
+      "inherits": [".devenv-ninja"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "trace-fetch",
+      "displayName": "Trace — lockfile + FetchContent",
+      "description": "CMAKE_MESSAGE_LOG_LEVEL=TRACE to watch dependency provider decisions",
+      "inherits": ["default"],
+      "cacheVariables": {
+        "CMAKE_MESSAGE_LOG_LEVEL": "TRACE"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI",
+      "description": "Deterministic, quieter logs; matches automation-friendly workflows",
+      "inherits": [".devenv-ninja"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_MESSAGE_LOG_LEVEL": "NOTICE",
+        "CMAKE_WARN_DEPRECATED": "ON"
+      },
+      "environment": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "NINJA_STATUS": "[%f/%t %e s] "
+      }
+    },
+    {
+      "name": "unix-makefiles",
+      "displayName": "Unix Makefiles",
+      "description": "Classic generator without Ninja",
+      "inherits": [".devenv-make"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "vs2022",
+      "displayName": "Visual Studio 2022 (Windows)",
+      "description": "MSVC, x64 host, multi-config",
+      "inherits": [".devenv-base"],
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": "windows",
+          "intelliSenseMode": "windows-msvc-x64"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "description": "Build after configure preset default",
+      "jobs": 0
+    },
+    {
+      "name": "trace-fetch",
+      "configurePreset": "trace-fetch",
+      "jobs": 0
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "configuration": "Release",
+      "verbose": true,
+      "jobs": 0
+    },
+    {
+      "name": "unix-makefiles",
+      "configurePreset": "unix-makefiles",
+      "jobs": 0
+    },
+    {
+      "name": "vs2022-debug",
+      "configurePreset": "vs2022",
+      "configuration": "Debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "jobs": 0
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "displayName": "Dev loop",
+      "description": "Configure default + build — wire pre-commit via FetchContent",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "default"
+        }
+      ]
+    },
+    {
+      "name": "ci",
+      "displayName": "CI",
+      "description": "Strict Release configure + verbose build",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci"
+        },
+        {
+          "type": "build",
+          "name": "ci"
+        }
+      ]
+    }
+  ]
+}

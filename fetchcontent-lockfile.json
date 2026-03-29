@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "mb_pre_commit",
+      "git_repository": "https://github.com/devmarkusb/pre-commit",
+      "git_tag": "v1.2.0",
+      "cmake_include": "cmake/mb-pre-commit.cmake"
+    }
+  ]
+}
