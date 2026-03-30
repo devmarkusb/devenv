@@ -17,6 +17,10 @@
 #   if the root CMakeLists.txt looks like it calls project(), configuration
 #   stops with a hint to set cmake_include; otherwise FetchContent_MakeAvailable
 #   is used.
+# - Optional "cmake_variables": JSON object whose string keys are CMake variable
+#   names and whose values (string or number) are applied with set() before
+#   include() or FetchContent_MakeAvailable (FIND_PACKAGE path: after defaults
+#   such as INSTALL_GTEST for GTest, so the lockfile can override).
 
 cmake_minimum_required(VERSION 3.24)
 
@@ -79,6 +83,64 @@ if(EXISTS "${lockfile_candidate}")
         APPEND
         PROPERTY CMAKE_CONFIGURE_DEPENDS "${consumer_fetchcontent_lockfile}"
     )
+
+    function(mb_devenv_apply_lockfile_cmake_variables dep_json error_prefix)
+        string(
+            JSON
+            kind
+            ERROR_VARIABLE kind_err
+            TYPE "${dep_json}"
+            "cmake_variables"
+        )
+        if(kind_err)
+            return()
+        endif()
+        if(NOT kind STREQUAL "OBJECT")
+            message(
+                FATAL_ERROR
+                "${error_prefix}: \"cmake_variables\" must be a JSON object, got \"${kind}\""
+            )
+        endif()
+        string(
+            JSON
+            n
+            ERROR_VARIABLE err
+            LENGTH "${dep_json}"
+            "cmake_variables"
+        )
+        if(err)
+            message(FATAL_ERROR "${error_prefix}: ${err}")
+        endif()
+        if(n EQUAL 0)
+            return()
+        endif()
+        math(EXPR n_max "${n} - 1")
+        foreach(i RANGE "${n_max}")
+            string(
+                JSON
+                key
+                ERROR_VARIABLE err
+                MEMBER "${dep_json}"
+                "cmake_variables"
+                "${i}"
+            )
+            if(err)
+                message(FATAL_ERROR "${error_prefix}: ${err}")
+            endif()
+            string(
+                JSON
+                val
+                ERROR_VARIABLE err
+                GET "${dep_json}"
+                "cmake_variables"
+                "${key}"
+            )
+            if(err)
+                message(FATAL_ERROR "${error_prefix}: ${err}")
+            endif()
+            set("${key}" "${val}" PARENT_SCOPE)
+        endforeach()
+    endfunction()
 
     # Eager FetchContent for entries with no package_name (or empty): script/module
     # dependencies that are not wired through find_package.
@@ -199,6 +261,10 @@ if(EXISTS "${lockfile_candidate}")
                     if(POLICY CMP0169)
                         cmake_policy(POP)
                     endif()
+                    mb_devenv_apply_lockfile_cmake_variables(
+                        "${_mb_devenv_fc_dep}"
+                        "${_mb_devenv_fc_ep}"
+                    )
                     string(TOLOWER "${_mb_devenv_fc_name}" _mb_devenv_fc_lc)
                     set(_mb_devenv_fc_src_var "${_mb_devenv_fc_lc}_SOURCE_DIR")
                     include(
@@ -213,6 +279,10 @@ if(EXISTS "${lockfile_candidate}")
                     if(POLICY CMP0169)
                         cmake_policy(POP)
                     endif()
+                    mb_devenv_apply_lockfile_cmake_variables(
+                        "${_mb_devenv_fc_dep}"
+                        "${_mb_devenv_fc_ep}"
+                    )
                     string(TOLOWER "${_mb_devenv_fc_name}" _mb_devenv_fc_lc)
                     set(_mb_devenv_fc_src_var "${_mb_devenv_fc_lc}_SOURCE_DIR")
                     set(_mb_devenv_fc_root_cmakelists
@@ -362,6 +432,10 @@ if(EXISTS "${lockfile_candidate}")
                         EXCLUDE_FROM_ALL
                     )
                     set(INSTALL_GTEST OFF) # Disable GoogleTest installation
+                    mb_devenv_apply_lockfile_cmake_variables(
+                        "${dep_obj}"
+                        "${error_prefix}"
+                    )
                     FetchContent_MakeAvailable("${name}")
 
                     # Important! <PackageName>_FOUND tells CMake that `find_package` is

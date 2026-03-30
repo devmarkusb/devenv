@@ -110,8 +110,19 @@ CMake **dependency provider** (CMake 3.24+). Include it as a top-level include (
   using `git_repository` and `git_tag` from the lockfile.
 - Adds the lockfile to `CMAKE_CONFIGURE_DEPENDS` so CMake reconfigures when the lockfile changes.
 
-Lockfile format: a JSON object with a `dependencies` array; each entry has `name`, `package_name`, `git_repository`,
-`git_tag`. This gives reproducible builds without relying on system packages (e.g. GTest).
+Lockfile format: a JSON object with a `dependencies` array. Each entry requires **`name`**, **`git_repository`**, and
+**`git_tag`**. Optional fields:
+
+- **`package_name`** — If set (non-empty), that dependency is resolved when the project calls
+  `find_package(<package_name>)` (FetchContent + `set(<Package>_FOUND)`).
+- **`cmake_include`** — For dependencies *without* `package_name`, used with FetchContent during the top-level include:
+  path under the fetched repo to a `.cmake` file to `include()` after populate (avoids nested `project()` when the dep has
+  its own `CMakeLists.txt`).
+- **`cmake_variables`** — JSON object: keys are CMake variable names, values are strings or numbers (applied as
+  `set()` before `include()` or `FetchContent_MakeAvailable`). On the `find_package` path, variables are applied after
+  defaults such as `INSTALL_GTEST` for GoogleTest, so the lockfile can override them.
+
+This gives reproducible builds without relying on system packages (e.g. GTest).
 
 #### mb-devenv-install-library-config.cmake
 
