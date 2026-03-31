@@ -22,10 +22,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install CMake
-        uses: lukka/get-cmake@v4.3.0
+        uses: lukka/get-cmake@v4.3.1
         with:
           cmakeVersion: 3.31.7
 
@@ -47,10 +47,10 @@ jobs:
     name: CMake — workflow preset dev (ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install CMake
-        uses: lukka/get-cmake@v4.3.0
+        uses: lukka/get-cmake@v4.3.1
         with:
           cmakeVersion: 3.31.7
 
@@ -64,10 +64,10 @@ jobs:
     name: CMake — Unix Makefiles (ubuntu, no Ninja)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install CMake
-        uses: lukka/get-cmake@v4.3.0
+        uses: lukka/get-cmake@v4.3.1
         with:
           cmakeVersion: 3.31.7
 
@@ -83,10 +83,10 @@ jobs:
     name: CMake — preset ci + clang toolchain (ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install CMake
-        uses: lukka/get-cmake@v4.3.0
+        uses: lukka/get-cmake@v4.3.1
         with:
           cmakeVersion: 3.31.7
 
@@ -102,10 +102,10 @@ jobs:
     name: CMake — VS 2022 (windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install CMake
-        uses: lukka/get-cmake@v4.3.0
+        uses: lukka/get-cmake@v4.3.1
         with:
           cmakeVersion: 3.31.7
 
