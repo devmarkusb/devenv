@@ -144,7 +144,7 @@ function(mb_devenv_install_library name)
         write_basic_package_version_file(
             "${config_version_file}"
             VERSION "${PROJECT_VERSION}"
-            COMPATIBILITY ExactVersion
+            COMPATIBILITY SameMajorVersion
         )
 
         install(
