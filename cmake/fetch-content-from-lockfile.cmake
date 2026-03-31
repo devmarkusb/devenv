@@ -101,13 +101,7 @@ if(EXISTS "${lockfile_candidate}")
                 "${error_prefix}: \"cmake_variables\" must be a JSON object, got \"${kind}\""
             )
         endif()
-        string(
-            JSON
-            n
-            ERROR_VARIABLE err
-            LENGTH "${dep_json}"
-            "cmake_variables"
-        )
+        string(JSON n ERROR_VARIABLE err LENGTH "${dep_json}" "cmake_variables")
         if(err)
             message(FATAL_ERROR "${error_prefix}: ${err}")
         endif()

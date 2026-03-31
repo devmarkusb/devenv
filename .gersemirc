@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/BlankSpruce/gersemi/0.22.3/gersemi/configuration.schema.json
+#
+# mb_pre_commit_setup comes from the fetched mb-pre-commit package (not this tree).
+# mb_devenv_apply_lockfile_cmake_variables is a nested function; gersemi does not
+# treat it as visible at call sites. Silence bogus unknown-command noise; typos in
+# real commands are still caught by CMake itself.
+warn_about_unknown_commands: false
