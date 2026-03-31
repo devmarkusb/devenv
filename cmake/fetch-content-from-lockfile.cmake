@@ -66,8 +66,7 @@ if(EXISTS "${lockfile_candidate}")
         "MB_DEVENV_FETCHCONTENT_LOCKFILE=\"${MB_DEVENV_FETCHCONTENT_LOCKFILE}\""
     )
     file(
-        REAL_PATH
-        "${MB_DEVENV_FETCHCONTENT_LOCKFILE}"
+        REAL_PATH "${MB_DEVENV_FETCHCONTENT_LOCKFILE}"
         consumer_fetchcontent_lockfile
         BASE_DIRECTORY "${consumer_project_dir}"
         EXPAND_TILDE
@@ -86,8 +85,7 @@ if(EXISTS "${lockfile_candidate}")
 
     function(mb_devenv_apply_lockfile_cmake_variables dep_json error_prefix)
         string(
-            JSON
-            kind
+            JSON kind
             ERROR_VARIABLE kind_err
             TYPE "${dep_json}"
             "cmake_variables"
@@ -111,8 +109,7 @@ if(EXISTS "${lockfile_candidate}")
         math(EXPR n_max "${n} - 1")
         foreach(i RANGE "${n_max}")
             string(
-                JSON
-                key
+                JSON key
                 ERROR_VARIABLE err
                 MEMBER "${dep_json}"
                 "cmake_variables"
@@ -122,8 +119,7 @@ if(EXISTS "${lockfile_candidate}")
                 message(FATAL_ERROR "${error_prefix}: ${err}")
             endif()
             string(
-                JSON
-                val
+                JSON val
                 ERROR_VARIABLE err
                 GET "${dep_json}"
                 "cmake_variables"
@@ -140,16 +136,14 @@ if(EXISTS "${lockfile_candidate}")
     # dependencies that are not wired through find_package.
     file(READ "${consumer_fetchcontent_lockfile}" _mb_devenv_fc_root)
     string(
-        JSON
-        _mb_devenv_fc_deps
+        JSON _mb_devenv_fc_deps
         ERROR_VARIABLE _mb_devenv_fc_err
         GET "${_mb_devenv_fc_root}"
         "dependencies"
     )
     if(NOT _mb_devenv_fc_err)
         string(
-            JSON
-            _mb_devenv_fc_n
+            JSON _mb_devenv_fc_n
             ERROR_VARIABLE _mb_devenv_fc_err
             LENGTH "${_mb_devenv_fc_deps}"
         )
@@ -160,8 +154,7 @@ if(EXISTS "${lockfile_candidate}")
                     "${consumer_fetchcontent_lockfile}, dependency ${_mb_devenv_fc_i}"
                 )
                 string(
-                    JSON
-                    _mb_devenv_fc_dep
+                    JSON _mb_devenv_fc_dep
                     ERROR_VARIABLE _mb_devenv_fc_err
                     GET "${_mb_devenv_fc_deps}"
                     "${_mb_devenv_fc_i}"
@@ -173,8 +166,7 @@ if(EXISTS "${lockfile_candidate}")
                     )
                 endif()
                 string(
-                    JSON
-                    _mb_devenv_fc_pkg
+                    JSON _mb_devenv_fc_pkg
                     ERROR_VARIABLE _mb_devenv_fc_pkg_err
                     GET "${_mb_devenv_fc_dep}"
                     "package_name"
@@ -186,8 +178,7 @@ if(EXISTS "${lockfile_candidate}")
                     continue()
                 endif()
                 string(
-                    JSON
-                    _mb_devenv_fc_name
+                    JSON _mb_devenv_fc_name
                     ERROR_VARIABLE _mb_devenv_fc_err
                     GET "${_mb_devenv_fc_dep}"
                     "name"
@@ -199,8 +190,7 @@ if(EXISTS "${lockfile_candidate}")
                     )
                 endif()
                 string(
-                    JSON
-                    _mb_devenv_fc_repo
+                    JSON _mb_devenv_fc_repo
                     ERROR_VARIABLE _mb_devenv_fc_err
                     GET "${_mb_devenv_fc_dep}"
                     "git_repository"
@@ -212,8 +202,7 @@ if(EXISTS "${lockfile_candidate}")
                     )
                 endif()
                 string(
-                    JSON
-                    _mb_devenv_fc_tag
+                    JSON _mb_devenv_fc_tag
                     ERROR_VARIABLE _mb_devenv_fc_err
                     GET "${_mb_devenv_fc_dep}"
                     "git_tag"
@@ -225,8 +214,7 @@ if(EXISTS "${lockfile_candidate}")
                     )
                 endif()
                 string(
-                    JSON
-                    _mb_devenv_fc_cmake_include
+                    JSON _mb_devenv_fc_cmake_include
                     ERROR_VARIABLE _mb_devenv_fc_inc_err
                     GET "${_mb_devenv_fc_dep}"
                     "cmake_include"
@@ -284,13 +272,11 @@ if(EXISTS "${lockfile_candidate}")
                     )
                     if(EXISTS "${_mb_devenv_fc_root_cmakelists}")
                         file(
-                            READ
-                            "${_mb_devenv_fc_root_cmakelists}"
+                            READ "${_mb_devenv_fc_root_cmakelists}"
                             _mb_devenv_fc_root_c
                         )
                         string(
-                            REGEX MATCH
-                            "(^|[\r\n])[ \t]*project[ \t]*\\("
+                            REGEX MATCH "(^|[\r\n])[ \t]*project[ \t]*\\("
                             _mb_devenv_fc_root_has_project
                             "${_mb_devenv_fc_root_c}"
                         )
@@ -322,8 +308,7 @@ if(EXISTS "${lockfile_candidate}")
 
         # Get the "dependencies" field and store it in dependencies_obj
         string(
-            JSON
-            dependencies_obj
+            JSON dependencies_obj
             ERROR_VARIABLE error
             GET "${root_obj}"
             "dependencies"
@@ -332,10 +317,9 @@ if(EXISTS "${lockfile_candidate}")
             message(FATAL_ERROR "${consumer_fetchcontent_lockfile}: ${error}")
         endif()
 
-        # Get the length of the libraries array and store it in dependencies_obj
+        # Get the length of the dependencies array
         string(
-            JSON
-            num_dependencies
+            JSON num_dependencies
             ERROR_VARIABLE error
             LENGTH "${dependencies_obj}"
         )
@@ -357,8 +341,7 @@ if(EXISTS "${lockfile_candidate}")
             # Get the dependency object at index
             # and store it in dep_obj
             string(
-                JSON
-                dep_obj
+                JSON dep_obj
                 ERROR_VARIABLE error
                 GET "${dependencies_obj}"
                 "${index}"
@@ -376,8 +359,7 @@ if(EXISTS "${lockfile_candidate}")
             # Optional "package_name": if absent or empty, this entry is only handled
             # by eager FetchContent above (not by find_package).
             string(
-                JSON
-                pkg_name
+                JSON pkg_name
                 ERROR_VARIABLE error
                 GET "${dep_obj}"
                 "package_name"
@@ -388,8 +370,7 @@ if(EXISTS "${lockfile_candidate}")
 
             # Get the "git_repository" field and store it in repo
             string(
-                JSON
-                repo
+                JSON repo
                 ERROR_VARIABLE error
                 GET "${dep_obj}"
                 "git_repository"
@@ -407,14 +388,12 @@ if(EXISTS "${lockfile_candidate}")
             if(method STREQUAL "FIND_PACKAGE")
                 if(package_name STREQUAL pkg_name)
                     string(
-                        APPEND
-                        debug
+                        APPEND debug
                         "Redirecting find_package calls for ${pkg_name} "
                         "to FetchContent logic.\n"
                     )
                     string(
-                        APPEND
-                        debug
+                        APPEND debug
                         "Fetching ${repo} at "
                         "${tag} according to ${consumer_fetchcontent_lockfile}."
                     )

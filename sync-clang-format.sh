@@ -54,7 +54,7 @@ fetch_to() {
     if command -v curl >/dev/null 2>&1; then
         curl -sSL --fail -o "${out}" "$url"
     elif command -v wget >/dev/null 2>&1; then
-        wget -q -O "${out}" "$url"
+        wget -q -O "${out}" "$url" || return 1
     else
         echo "Need curl or wget to fetch .clang-format." >&2
         exit 1

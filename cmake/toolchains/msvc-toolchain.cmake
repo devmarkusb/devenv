@@ -26,5 +26,5 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "${RELEASE_FLAGS}")
 set(CMAKE_C_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 
-# Add this dir to the module path so that `find_package(your-install-library)` works
-list(APPEND CMAKE_PREFIX_PATH "../..")
+# Top-level CMakeLists directory (consumer root or this repo); works for submodule and standalone.
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}")

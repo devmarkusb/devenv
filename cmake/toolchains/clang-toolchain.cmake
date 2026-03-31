@@ -16,10 +16,9 @@ if(MB_DEVENV_SANITIZER STREQUAL "MaxSan")
 elseif(MB_DEVENV_SANITIZER STREQUAL "TSan")
     set(SANITIZER_FLAGS "-fsanitize=thread")
 elseif(MB_DEVENV_SANITIZER STREQUAL "MSan")
-    set(ENV{MSAN_OPTIONS}
-        "suppressions=${CMAKE_SOURCE_DIR}/devenv/cmake/toolchains/msan.supp"
-    )
-    set(MSAN_IGNORELIST "${CMAKE_SOURCE_DIR}/devenv/cmake/toolchains/msan.supp")
+    set(_mb_devenv_msan_supp "${CMAKE_CURRENT_LIST_DIR}/msan.supp")
+    set(ENV{MSAN_OPTIONS} "suppressions=${_mb_devenv_msan_supp}")
+    set(MSAN_IGNORELIST "${_mb_devenv_msan_supp}")
     set(SANITIZER_FLAGS
         "-fsanitize=memory -fsanitize-ignorelist=${MSAN_IGNORELIST}"
     )
@@ -36,5 +35,5 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "${RELEASE_FLAGS}")
 set(CMAKE_C_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "${RELEASE_FLAGS}")
 
-# Add this dir to the module path so that `find_package(your-install-library)` works
-list(APPEND CMAKE_PREFIX_PATH "../..")
+# Top-level CMakeLists directory (consumer root or this repo); works for submodule and standalone.
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}")

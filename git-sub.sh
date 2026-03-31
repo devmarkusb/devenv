@@ -3,11 +3,9 @@
 # Helper script to get all the git submodule update stuff done, after cloning, updating your main repo.
 # For convenience it also contains similar git lfs update logic.
 
-set -x
+set -euo pipefail
 
 git submodule update --init --recursive --recommend-shallow
-
-set -e
 
 # Ensure we're inside a git repository
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0

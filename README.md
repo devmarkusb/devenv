@@ -72,9 +72,8 @@ cd devenv && ./sync-clang-format.sh [VERSION]
   or the repo root `.clang-format` if that path doesn’t exist.
 - Env overrides: `CLANGFORMAT_REPO`, `CLANGFORMAT_BRANCH`, `CLANGFORMAT_VERSION`.
 
-The folder **`devenv/clangformat-configs/`** holds versioned configs (`configs/v14/`, `configs/v22/`) to copy into
-[devmarkusb/clangformat](https://github.com/devmarkusb/clangformat) so that repo can serve them. See
-`devenv/clangformat-configs/README.md`.
+Versioned styles live in [devmarkusb/clangformat](https://github.com/devmarkusb/clangformat) under `configs/vNN/`; use
+`sync-clang-format.sh` to pull one of them into your project root `.clang-format`.
 
 ### cmake
 
@@ -140,8 +139,9 @@ Defines **`mb_devenv_install_library(name)`** for header-only/INTERFACE librarie
 
 #### ci.yml
 
-Runs on pushes to `main`, pull requests, and manual dispatch. Uses **CMake 3.28+** (workflow presets need 3.25+;
-`CMakePresets.json` still allows 3.24 for configure-only use). Jobs mirror `CMakePresets.json`:
+Runs on pushes to `main`, pull requests, and manual dispatch. Uses **CMake 3.31+** (matches `cmakeMinimumRequired` in
+`CMakePresets.json`; `cmake_minimum_required` in `CMakeLists.txt` is 3.24 for consumers including only individual
+`.cmake` modules). Jobs mirror `CMakePresets.json`:
 
 - **workflow preset `ci`** on Ubuntu and macOS (`cmake --workflow --preset ci`) — Ninja, Release, lockfile FetchContent.
 - **workflow preset `dev`** on Ubuntu — Ninja, Debug, same dependency path as local dev.
@@ -156,8 +156,8 @@ Reusable workflow for **lint check (pre-commit)**. Main repo typically calls it 
 
 - **On push to `main`:** Full checkout (with submodules), runs pre-commit on **all files** so formatting/lint issues are
   fixed over the whole tree.
-- **On pull_request_target:** Checkouts the PR branch, runs pre-commit only on **changed files**, then uses **reviewdog
-  ** (action-suggester) to post suggested fixes as PR comments.
+- **On pull_request_target:** Checkouts the PR branch, runs pre-commit only on **changed files**, then uses
+  **reviewdog** (action-suggester) to post suggested fixes as PR comments.
 
 Requires Python (e.g. 3.13) and, for PRs, `gh` and a token that can write checks and comments.
 
