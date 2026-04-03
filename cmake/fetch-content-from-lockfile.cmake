@@ -227,6 +227,7 @@ if(EXISTS "${lockfile_candidate}")
                     "${_mb_devenv_fc_name}"
                     GIT_REPOSITORY "${_mb_devenv_fc_repo}"
                     GIT_TAG "${_mb_devenv_fc_tag}"
+                    GIT_SHALLOW ON
                     EXCLUDE_FROM_ALL
                 )
                 if(
@@ -402,6 +403,7 @@ if(EXISTS "${lockfile_candidate}")
                         "${name}"
                         GIT_REPOSITORY "${repo}"
                         GIT_TAG "${tag}"
+                        GIT_SHALLOW ON
                         EXCLUDE_FROM_ALL
                     )
                     set(INSTALL_GTEST OFF) # Disable GoogleTest installation
