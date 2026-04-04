@@ -4,6 +4,9 @@
 
 include_guard(GLOBAL)
 
+# Inside functions, CMAKE_CURRENT_LIST_DIR is the caller's list dir, not this file's — keep the module path here.
+set(_mb_devenv_compile_check_module_dir "${CMAKE_CURRENT_LIST_DIR}")
+
 # Creates an executable ${target} from a generated TU that #includes HEADER, links libraries, and applies defaults.
 #
 # Usage:
@@ -42,7 +45,7 @@ function(mb_devenv_add_compile_check target)
         "${CMAKE_CURRENT_BINARY_DIR}/mb_devenv_compile_check_${_mb_devenv_cc_slug}.cpp"
     )
     configure_file(
-        "${CMAKE_CURRENT_LIST_DIR}/mb-devenv-compile-check.cpp.in"
+        "${_mb_devenv_compile_check_module_dir}/detail/mb-devenv-compile-check.cpp.in"
         "${_mb_devenv_cc_gen}"
         @ONLY
     )
