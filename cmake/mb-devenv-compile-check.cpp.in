@@ -1,0 +1,7 @@
+// TUs that include the umbrella header force a full compile of the header-only surface.
+@MB_DEVENV_COMPILE_CHECK_INCLUDE_LINE@
+#include <cstdint>
+
+int32_t main() {
+    return 0;
+}
