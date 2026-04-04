@@ -18,13 +18,7 @@ set(_mb_devenv_compile_check_module_dir "${CMAKE_CURRENT_LIST_DIR}")
 #
 # Optional keyword SYSTEM_INCLUDE (before HEADER): use #include <HEADER> instead of #include "HEADER".
 function(mb_devenv_add_compile_check target)
-    cmake_parse_arguments(
-        PARSE_ARGV 1
-        ARG
-        "SYSTEM_INCLUDE"
-        "HEADER"
-        ""
-    )
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "SYSTEM_INCLUDE" "HEADER" "")
 
     if(NOT ARG_HEADER)
         message(
@@ -40,8 +34,7 @@ function(mb_devenv_add_compile_check target)
     endif()
 
     string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _mb_devenv_cc_slug "${target}")
-    set(
-        _mb_devenv_cc_gen
+    set(_mb_devenv_cc_gen
         "${CMAKE_CURRENT_BINARY_DIR}/mb_devenv_compile_check_${_mb_devenv_cc_slug}.cpp"
     )
     configure_file(
