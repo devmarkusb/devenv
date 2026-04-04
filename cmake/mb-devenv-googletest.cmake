@@ -10,14 +10,6 @@ list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    foreach(_mb_devenv_gtest_tg IN ITEMS gtest gtest_main gmock gmock_main)
-        if(TARGET ${_mb_devenv_gtest_tg})
-            target_compile_options(${_mb_devenv_gtest_tg} PRIVATE -Wno-character-conversion)
-        endif()
-    endforeach()
-endif()
-
 # Sanitized binaries are slow to start; default gtest discovery timeout (5s) is often too low.
 set(_mb_devenv_gtest_discovery_timeout_sanitizer 60)
 
