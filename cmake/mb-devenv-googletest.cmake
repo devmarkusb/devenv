@@ -14,7 +14,7 @@ find_package(GTest REQUIRED)
 include(GoogleTest)
 
 # Sanitized binaries are slow to start; default gtest discovery timeout (5s) is often too low.
-set(_mb_devenv_gtest_discovery_timeout_sanitizer 120)
+set(_mb_devenv_gtest_discovery_timeout_sanitizer 60)
 
 function(mb_devenv_add_test target)
     if(MB_DEVENV_SANITIZER)
