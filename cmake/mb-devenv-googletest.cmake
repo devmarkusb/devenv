@@ -13,7 +13,10 @@ include(GoogleTest)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     foreach(_mb_devenv_gtest_tg IN ITEMS gtest gtest_main gmock gmock_main)
         if(TARGET ${_mb_devenv_gtest_tg})
-            target_compile_options(${_mb_devenv_gtest_tg} PRIVATE -Wno-character-conversion)
+            target_compile_options(
+                ${_mb_devenv_gtest_tg}
+                PRIVATE -Wno-character-conversion
+            )
         endif()
     endforeach()
 endif()
@@ -23,7 +26,10 @@ set(_mb_devenv_gtest_discovery_timeout_sanitizer 60)
 
 function(mb_devenv_add_test target)
     if(MB_DEVENV_SANITIZER)
-        gtest_discover_tests(${target} DISCOVERY_TIMEOUT ${_mb_devenv_gtest_discovery_timeout_sanitizer})
+        gtest_discover_tests(
+            ${target}
+            DISCOVERY_TIMEOUT ${_mb_devenv_gtest_discovery_timeout_sanitizer}
+        )
     else()
         gtest_discover_tests(${target})
     endif()
