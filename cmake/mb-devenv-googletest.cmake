@@ -4,7 +4,8 @@
 
 include_guard(GLOBAL)
 
-enable_testing()
+# calls enable_testing() implicitly
+include(CTest)
 
 # Show stdout/stderr when a test fails, which helps both local debugging and CI.
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
