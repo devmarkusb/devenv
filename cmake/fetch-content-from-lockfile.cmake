@@ -229,6 +229,7 @@ if(EXISTS "${lockfile_candidate}")
                     GIT_TAG "${_mb_devenv_fc_tag}"
                     GIT_SHALLOW ON
                     EXCLUDE_FROM_ALL
+                    SYSTEM
                 )
                 if(
                     NOT _mb_devenv_fc_inc_err
@@ -405,6 +406,7 @@ if(EXISTS "${lockfile_candidate}")
                         GIT_TAG "${tag}"
                         GIT_SHALLOW ON
                         EXCLUDE_FROM_ALL
+                        SYSTEM
                     )
                     set(INSTALL_GTEST OFF) # Disable GoogleTest installation
                     mb_devenv_apply_lockfile_cmake_variables(
