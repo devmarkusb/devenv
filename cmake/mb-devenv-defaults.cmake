@@ -23,6 +23,7 @@ endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/detail/defs.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/detail/cpp-features.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/detail/warnings.cmake)
 
 option(MB_DEVENV_ENABLE_LTO "enables link time optimization" OFF)
 
