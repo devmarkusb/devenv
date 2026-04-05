@@ -22,3 +22,13 @@ endif()
 if(ANDROID)
     set(MB_DEVENV_ANDROID TRUE)
 endif()
+
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("
+#include <string>
+#ifndef _LIBCPP_VERSION
+#error Not libc++
+#endif
+int main() {}
+" MB_DEVENV_USING_LIBCPP)
