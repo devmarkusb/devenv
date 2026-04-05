@@ -167,6 +167,7 @@ macro(mb_devenv_set_target_warnings target)
                 PRIVATE
                     -fexceptions
                     -fno-builtin
+                    -fno-common
                     -fstack-clash-protection
                     -fstack-protector-strong
                     # Clear env/distro _FORTIFY_SOURCE; only re-enable on configs that use -O (glibc warns
