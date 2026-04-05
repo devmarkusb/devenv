@@ -25,10 +25,13 @@ endif()
 
 include(CheckCXXSourceCompiles)
 
-check_cxx_source_compiles("
+check_cxx_source_compiles(
+    "
 #include <string>
 #ifndef _LIBCPP_VERSION
 #error Not libc++
 #endif
 int main() {}
-" MB_DEVENV_USING_LIBCPP)
+"
+    MB_DEVENV_USING_LIBCPP
+)
