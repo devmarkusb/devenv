@@ -21,16 +21,28 @@ foreach(_mb_devenv_line_index RANGE ${_mb_devenv_last_index})
 
     list(GET _mb_devenv_ctest_lines ${_mb_devenv_line_index} _mb_devenv_line)
 
-    if(_mb_devenv_line MATCHES "^add_test\\(" AND _mb_devenv_line_index LESS _mb_devenv_last_index)
+    if(
+        _mb_devenv_line MATCHES "^add_test\\("
+        AND _mb_devenv_line_index LESS _mb_devenv_last_index
+    )
         math(EXPR _mb_devenv_next_index "${_mb_devenv_line_index} + 1")
-        list(GET _mb_devenv_ctest_lines ${_mb_devenv_next_index} _mb_devenv_next_line)
+        list(
+            GET _mb_devenv_ctest_lines
+            ${_mb_devenv_next_index}
+            _mb_devenv_next_line
+        )
         if(_mb_devenv_next_line MATCHES " PROPERTIES DISABLED YES ")
             set(_mb_devenv_skip_next ON)
             continue()
         endif()
     endif()
 
-    string(REPLACE " --gtest_also_run_disabled_tests" "" _mb_devenv_line "${_mb_devenv_line}")
+    string(
+        REPLACE " --gtest_also_run_disabled_tests"
+        ""
+        _mb_devenv_line
+        "${_mb_devenv_line}"
+    )
     list(APPEND _mb_devenv_filtered_lines "${_mb_devenv_line}")
 endforeach()
 
