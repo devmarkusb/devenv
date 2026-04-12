@@ -122,6 +122,10 @@ def install_with_zypper(prefix: list[str]) -> None:
     run(prefix + ["zypper", "--non-interactive", "install", "cppcheck"])
 
 
+def install_with_emerge(prefix: list[str]) -> None:
+    run(prefix + ["emerge", "--noreplace", "dev-util/cppcheck"])
+
+
 def install_with_brew() -> None:
     run(["brew", "install", "cppcheck"])
 
@@ -139,6 +143,9 @@ def install_on_linux() -> None:
         return
     if command_exists("zypper"):
         install_with_zypper(prefix)
+        return
+    if command_exists("emerge"):
+        install_with_emerge(prefix)
         return
     if command_exists("brew"):
         install_with_brew()
