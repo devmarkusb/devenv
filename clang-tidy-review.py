@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import json
 import os
 from pathlib import Path
 import re
@@ -23,7 +24,7 @@ FULL_SCAN_TRIGGER_PATHS = {
     ".clang-tidy",
     "CMakeLists.txt",
     "CMakePresets.json",
-    "devenv/clang_tidy_review.py",
+    "devenv/clang-tidy-review.py",
 }
 
 
@@ -299,6 +300,67 @@ def should_trigger_full_scan(path: str) -> bool:
     )
 
 
+def normalize_line_ranges(ranges: list[list[int]]) -> list[list[int]]:
+    if not ranges:
+        return []
+
+    normalized: list[list[int]] = []
+    for start, end in sorted(ranges):
+        if not normalized or start > normalized[-1][1] + 1:
+            normalized.append([start, end])
+            continue
+        normalized[-1][1] = max(normalized[-1][1], end)
+    return normalized
+
+
+def build_changed_line_filter(base_sha: str, head_sha: str) -> str:
+    diff_output = git_output(
+        "diff",
+        "--unified=0",
+        "--no-color",
+        "--diff-filter=ACMR",
+        base_sha,
+        head_sha,
+    )
+
+    current_path = ""
+    changed_ranges_by_path: dict[str, list[list[int]]] = {}
+    hunk_pattern = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+    for line in diff_output.splitlines():
+        if line.startswith("+++ "):
+            path_text = line[4:]
+            if path_text == "/dev/null":
+                current_path = ""
+            elif path_text.startswith("b/"):
+                current_path = path_text[2:]
+            else:
+                current_path = path_text
+            continue
+
+        if not current_path or not (is_translation_unit(current_path) or is_header(current_path)):
+            continue
+
+        match = hunk_pattern.match(line)
+        if not match:
+            continue
+
+        start = int(match.group(1))
+        count = int(match.group(2) or "1")
+        if count == 0:
+            continue
+
+        end = start + count - 1
+        changed_ranges_by_path.setdefault(current_path, []).append([start, end])
+
+    line_filter = [
+        {"name": path, "lines": normalize_line_ranges(ranges)}
+        for path, ranges in sorted(changed_ranges_by_path.items())
+        if ranges
+    ]
+    return json.dumps(line_filter, separators=(",", ":"))
+
+
 def resolve_default_base_ref() -> str:
     for ref in ("@{upstream}", "origin/main", "main", "HEAD^"):
         if run(["git", "rev-parse", "--verify", "--quiet", ref], check=False).returncode == 0:
@@ -308,7 +370,7 @@ def resolve_default_base_ref() -> str:
     return ""
 
 
-def select_changed_translation_units(base_ref: str, head_ref: str) -> list[str]:
+def select_changed_translation_units(base_ref: str, head_ref: str) -> tuple[list[str], str]:
     head_sha = git_output("rev-parse", head_ref)
     base_sha = base_ref or resolve_default_base_ref()
     if base_sha == ZERO_SHA:
@@ -316,7 +378,7 @@ def select_changed_translation_units(base_ref: str, head_ref: str) -> list[str]:
 
     if not base_sha:
         print("No diff base available; skipping changed-lines clang-tidy run.")
-        return []
+        return [], ""
 
     changed_output = git_output(
         "diff", "--name-only", "--diff-filter=ACMR", base_sha, head_sha
@@ -324,22 +386,27 @@ def select_changed_translation_units(base_ref: str, head_ref: str) -> list[str]:
     changed_paths = [line for line in changed_output.splitlines() if line]
     if not changed_paths:
         print("No changed files to analyze.")
-        return []
+        return [], ""
 
     all_translation_units = [path for path in list_git_files() if is_translation_unit(path)]
     if not all_translation_units:
         print("No translation units found; skipping changed-files clang-tidy run.")
-        return []
+        return [], ""
+
+    line_filter = build_changed_line_filter(base_sha, head_sha)
+    if not line_filter or line_filter == "[]":
+        print("No changed source or header lines to analyze.")
+        return [], ""
 
     if any(should_trigger_full_scan(path) for path in changed_paths):
         print("Header or build configuration changes detected; running clang-tidy on the full project.")
-        return all_translation_units
+        return all_translation_units, line_filter
 
     selected = [path for path in changed_paths if is_translation_unit(path)]
     if not selected:
         print("No changed translation units to analyze.")
-        return []
-    return selected
+        return [], ""
+    return selected, line_filter
 
 
 def select_full_translation_units() -> list[str]:
@@ -351,16 +418,20 @@ def select_full_translation_units() -> list[str]:
 
 
 def run_single_clang_tidy(
-    clang_tidy: Path, build_dir: Path, translation_unit: str
+    clang_tidy: Path, build_dir: Path, translation_unit: str, line_filter: str
 ) -> tuple[int, str, str]:
+    command = [
+        str(clang_tidy),
+        "-p",
+        str(build_dir),
+        f"-header-filter={HEADER_FILTER}",
+    ]
+    if line_filter:
+        command.append(f"-line-filter={line_filter}")
+    command.append(translation_unit)
+
     result = subprocess.run(
-        [
-            str(clang_tidy),
-            "-p",
-            str(build_dir),
-            f"-header-filter={HEADER_FILTER}",
-            translation_unit,
-        ],
+        command,
         cwd=str(repo_root()),
         capture_output=True,
         text=True,
@@ -369,7 +440,12 @@ def run_single_clang_tidy(
 
 
 def run_clang_tidy(
-    clang_tidy: Path, build_dir: Path, translation_units: list[str], report_file: str
+    clang_tidy: Path,
+    build_dir: Path,
+    translation_units: list[str],
+    report_file: str,
+    *,
+    line_filter: str = "",
 ) -> int:
     if not translation_units:
         return 0
@@ -386,7 +462,9 @@ def run_clang_tidy(
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
-                executor.submit(run_single_clang_tidy, clang_tidy, build_dir, unit): unit
+                executor.submit(
+                    run_single_clang_tidy, clang_tidy, build_dir, unit, line_filter
+                ): unit
                 for unit in translation_units
             }
             for future in concurrent.futures.as_completed(futures):
@@ -420,10 +498,19 @@ def main() -> int:
 
     if args.mode == "full":
         translation_units = select_full_translation_units()
+        line_filter = ""
     else:
-        translation_units = select_changed_translation_units(args.base_ref, args.head_ref)
+        translation_units, line_filter = select_changed_translation_units(
+            args.base_ref, args.head_ref
+        )
 
-    return run_clang_tidy(clang_tidy, build_dir, translation_units, args.report_file)
+    return run_clang_tidy(
+        clang_tidy,
+        build_dir,
+        translation_units,
+        args.report_file,
+        line_filter=line_filter,
+    )
 
 
 if __name__ == "__main__":
