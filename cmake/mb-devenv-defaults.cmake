@@ -239,6 +239,7 @@ macro(mb_devenv_set_target_warnings target)
                     -Wmissing-prototypes
                     -Wno-c++11-narrowing
                     -Wno-c++20-compat
+                    -Wno-ctad-maybe-unsupported
                     -Wno-switch-default
             )
         endif()
@@ -255,6 +256,7 @@ macro(mb_devenv_set_target_warnings target)
                         -Wmissing-prototypes
                         -Wno-c++98-compat
                         -Wno-c++98-compat-pedantic
+                        -Wno-ctad-maybe-unsupported
                         -Wno-covered-switch-default
                         -Wno-deprecated
                         -Wno-double-promotion
