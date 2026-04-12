@@ -64,6 +64,11 @@ def parse_args() -> argparse.Namespace:
         help="Save and tee clang-tidy output to this file.",
     )
     parser.add_argument(
+        "--show-summary",
+        action="store_true",
+        help="Show clang-tidy warning statistics instead of suppressing them with --quiet.",
+    )
+    parser.add_argument(
         "--install",
         action="store_true",
         help="Install or upgrade the latest available LLVM/clang-tidy from a package manager.",
@@ -435,6 +440,8 @@ def run_single_clang_tidy(
     translation_unit: str,
     line_filter: str,
     extra_args_before: list[str],
+    *,
+    quiet: bool,
 ) -> tuple[int, str, str]:
     command = [
         str(clang_tidy),
@@ -442,6 +449,8 @@ def run_single_clang_tidy(
         str(build_dir),
         f"-header-filter={HEADER_FILTER}",
     ]
+    if quiet:
+        command.append("--quiet")
     command.extend(extra_args_before)
     if line_filter:
         command.append(f"-line-filter={line_filter}")
@@ -463,6 +472,7 @@ def run_clang_tidy(
     report_file: str,
     *,
     line_filter: str = "",
+    quiet: bool = True,
 ) -> int:
     if not translation_units:
         return 0
@@ -487,6 +497,7 @@ def run_clang_tidy(
                     unit,
                     line_filter,
                     extra_args_before,
+                    quiet=quiet,
                 ): unit
                 for unit in translation_units
             }
@@ -533,6 +544,7 @@ def main() -> int:
         translation_units,
         args.report_file,
         line_filter=line_filter,
+        quiet=not args.show_summary,
     )
 
 
