@@ -270,6 +270,18 @@ def configure(preset: str) -> None:
     run(["cmake", "--preset", preset])
 
 
+def discover_extra_args_before() -> list[str]:
+    if sys.platform != "darwin" or not command_exists("xcrun"):
+        return []
+    try:
+        sdk_path = run(["xcrun", "--show-sdk-path"], capture_output=True, check=True).stdout.strip()
+    except subprocess.CalledProcessError:
+        return []
+    if not sdk_path:
+        return []
+    return ["--extra-arg-before=-isysroot", f"--extra-arg-before={sdk_path}"]
+
+
 def list_git_files() -> list[str]:
     output = git_output("ls-files")
     return [line for line in output.splitlines() if line]
@@ -418,7 +430,11 @@ def select_full_translation_units() -> list[str]:
 
 
 def run_single_clang_tidy(
-    clang_tidy: Path, build_dir: Path, translation_unit: str, line_filter: str
+    clang_tidy: Path,
+    build_dir: Path,
+    translation_unit: str,
+    line_filter: str,
+    extra_args_before: list[str],
 ) -> tuple[int, str, str]:
     command = [
         str(clang_tidy),
@@ -426,6 +442,7 @@ def run_single_clang_tidy(
         str(build_dir),
         f"-header-filter={HEADER_FILTER}",
     ]
+    command.extend(extra_args_before)
     if line_filter:
         command.append(f"-line-filter={line_filter}")
     command.append(translation_unit)
@@ -460,10 +477,16 @@ def run_clang_tidy(
     workers = os.cpu_count() or 1
 
     try:
+        extra_args_before = discover_extra_args_before()
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
-                    run_single_clang_tidy, clang_tidy, build_dir, unit, line_filter
+                    run_single_clang_tidy,
+                    clang_tidy,
+                    build_dir,
+                    unit,
+                    line_filter,
+                    extra_args_before,
                 ): unit
                 for unit in translation_units
             }
