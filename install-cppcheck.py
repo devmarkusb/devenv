@@ -21,10 +21,13 @@ def command_exists(name: str) -> bool:
 def run(
     command: list[str], *, check: bool = True, capture_output: bool = False
 ) -> subprocess.CompletedProcess[str]:
+    stdout = subprocess.PIPE if capture_output else sys.stderr
+    stderr = subprocess.PIPE if capture_output else sys.stderr
     return subprocess.run(
         command,
         check=check,
-        capture_output=capture_output,
+        stdout=stdout,
+        stderr=stderr,
         text=True,
     )
 
