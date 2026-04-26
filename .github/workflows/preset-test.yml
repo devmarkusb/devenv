@@ -1,0 +1,38 @@
+name: preset test matrix
+
+# Windows + MSVC presets must set runner to a Windows hosted runner (e.g. windows-latest). Do not rely on
+# runner defaulting to ubuntu-latest while only setting a Windows container image; MSVC setup is gated on runner.
+
+on:
+  workflow_call:
+    inputs:
+      matrix_config:
+        description: >-
+          JSON array of objects, e.g. {"preset":"ci","runner":"ubuntu-latest"} or {"preset":"ci","image":"..."}.
+          For Windows/MSVC use "runner":"windows-latest" (MSVC setup uses startsWith(runner, 'windows')).
+        type: string
+        required: true
+
+jobs:
+  preset_test_matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        presets: ${{ fromJSON(inputs.matrix_config) }}
+    name: "Preset: ${{ matrix.presets.preset }} on ${{ matrix.presets.runner || 'ubuntu-latest' }}"
+    runs-on: ${{ matrix.presets.runner || 'ubuntu-latest' }}
+    container: ${{ matrix.presets.image }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Setup build environment
+        if: matrix.presets.runner
+        uses: lukka/get-cmake@6c740684eca256565af86fb8b8fdf43dd3f6fbc0 # v4.3.0
+      - name: Setup MSVC
+        if: startsWith(matrix.presets.runner, 'windows')
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+      - name: Run preset
+        run: cmake --workflow --preset ${{ matrix.presets.preset }}

@@ -1,7 +1,7 @@
 # devenv
 
 [![CI](https://github.com/devmarkusb/devenv/actions/workflows/ci.yml/badge.svg)](https://github.com/devmarkusb/devenv/actions/workflows/ci.yml)
-[![Lint](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit.yml)
+[![Lint](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit-check.yml/badge.svg)](https://github.com/devmarkusb/devenv/actions/workflows/pre-commit-check.yml)
 
 Basic must-haves for a convenient general infrastructure setup of C++ apps/libs. Intended to be added as a **git
 submodule** to your project repo.
@@ -111,17 +111,107 @@ Runs on pushes to `main`, pull requests, and manual dispatch. Uses **CMake 3.31+
 - **`ci` + `cmake/toolchains/clang-toolchain.cmake`** on Ubuntu — exercises the Clang toolchain file with the `ci` preset.
 - **presets `vs2022` / `vs2022-debug`** on Windows — Visual Studio 2022, MSVC x64.
 
-#### pre-commit.yml
+#### pre-commit-check.yml
 
-Reusable workflow for **lint check (pre-commit)**. Main repo typically calls it from a workflow like
-`pre-commit-check.yml` with `uses: .../devenv/.github/workflows/pre-commit.yml`.
+Devenv's own trigger workflow — calls `pre-commit.yml` on push to `main` and `pull_request_target`. Use it as a
+template for consumer repos that want the same pattern without referencing devenv's internal workflow directly.
 
-- **On push to `main`:** Full checkout (with submodules), runs pre-commit on **all files** so formatting/lint issues are
-  fixed over the whole tree.
-- **On pull_request_target:** Checkouts the PR branch, runs pre-commit only on **changed files**, then uses
-  **reviewdog** (action-suggester) to post suggested fixes as PR comments.
+---
 
-Requires Python (e.g., 3.13) and, for PRs, `gh` and a token that can write checks and comments.
+## Reusable GitHub Actions workflows
+
+The following workflows are designed to be called from consumer C++ CMake project repositories. Reference them with a
+**full ref** (tag, SHA, or branch) so upstream changes don't break your CI unexpectedly:
+
+```yaml
+jobs:
+  build:
+    uses: devmarkusb/devenv/.github/workflows/build-and-test.yml@main
+    with:
+      matrix_config: ${{ vars.MATRIX_JSON }}
+```
+
+Pin the callee ref (e.g. `@v1.0.0` or a commit SHA) for stability.
+
+Consumer repos are expected to include devenv as a git submodule at `devenv/` so the toolchain files and CMake modules
+referenced inside these workflows resolve correctly.
+
+### build-and-test.yml
+
+**Trigger:** `workflow_call`
+
+| Input           | Required | Description                             |
+|-----------------|----------|-----------------------------------------|
+| `matrix_config` | yes      | Compiler-keyed JSON matrix (see below). |
+
+Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
+gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version>` Docker images; Apple Clang uses
+`macos-latest`; MSVC uses `windows-latest`. Supported test-type suffixes: `Default`, `TSan`, `MSan`, `MaxSan`,
+`MaxWarn`, `MaxWarnMsvc`, `Dynamic`, `Coverage`. Coverage rows run `gcovr` and upload to Coveralls.
+
+**Consumer assumptions:** `devenv/cmake/toolchains/*.cmake` and
+`devenv/cmake/fetch-content-from-lockfile.cmake` present; Ninja Multi-Config generator.
+
+### preset-test.yml
+
+**Trigger:** `workflow_call`
+
+| Input           | Required | Description                                                                                               |
+|-----------------|----------|-----------------------------------------------------------------------------------------------------------|
+| `matrix_config` | yes      | JSON **array** of `{"preset":"ci","runner":"ubuntu-latest"}` or `{"preset":"ci","image":"..."}` objects.  |
+
+Runs `cmake --workflow --preset <name>` for each matrix entry. For Windows/MSVC set `"runner":"windows-latest"` — MSVC
+setup is gated on the runner name.
+
+### install-test.yml
+
+**Trigger:** `workflow_call`
+
+| Input            | Required | Description                                            |
+|------------------|----------|--------------------------------------------------------|
+| `image`          | yes      | Container image for building the library.              |
+| `cxx_standard`   | yes      | `CMAKE_CXX_STANDARD` value (e.g. `20`).                |
+| `namespace`      | yes      | CMake namespace / package prefix (e.g. `mycompany`).   |
+| `include_header` | no       | Full include path for the consumer smoke test.         |
+| `main_header`    | no       | Header file name; defaults to `<library>.hpp`.         |
+
+Configures the project with the FetchContent lockfile helper, resolves the library name from the CMake file API
+codemodel reply, installs to `dist/`, then builds a minimal `find_package` consumer to verify the installation.
+
+### update-pre-commit.yml
+
+**Trigger:** `workflow_call`
+
+| Secret        | Required | Description                              |
+|---------------|----------|------------------------------------------|
+| `APP_ID`      | yes      | GitHub App ID for creating the PR.       |
+| `PRIVATE_KEY` | yes      | GitHub App private key.                  |
+
+Runs `pre-commit autoupdate`, applies hooks to all files (non-blocking so the PR is still created even if hooks fail),
+opens or updates a PR via `peter-evans/create-pull-request`, adds a warning to the PR body and job summary when
+`--all-files` fails, then **fails the job** so the run stays red until follow-up fixes land.
+
+### pre-commit.yml
+
+**Trigger:** `workflow_call` (invoked with the caller's `on` events, e.g. `push` / `pull_request_target`).
+
+Consumer repos call it from their own trigger workflow, e.g.:
+
+```yaml
+on:
+  pull_request_target:
+  push:
+    branches: [main]
+jobs:
+  pre-commit:
+    uses: devmarkusb/devenv/.github/workflows/pre-commit.yml@main
+```
+
+- **On push:** Full checkout (with submodules), installs pre-commit via pip (with cache), runs `--all-files`.
+- **On `pull_request_target`:** Checks out the PR branch with `gh pr checkout`, runs pre-commit, then uses
+  **reviewdog** (`action-suggester`) to post suggested fixes as PR comments on failure.
+
+Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` for the PR job.
 
 ### .gitignore
 

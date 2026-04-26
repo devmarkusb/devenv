@@ -1,0 +1,68 @@
+name: pre-commit auto-update
+
+on:
+  workflow_call:
+    secrets:
+      APP_ID:
+        required: true
+      PRIVATE_KEY:
+        required: true
+
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Generate a token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.13
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit autoupdate
+        run: pre-commit autoupdate
+      # Allow PR creation when new hooks report findings; fail the job afterward so the run is visibly red.
+      - name: Apply updated hooks to all files
+        id: apply_hooks
+        run: pre-commit run --all-files
+        continue-on-error: true
+      - name: Prepare PR body extras
+        if: always()
+        id: pr_body_extra
+        run: |
+          extra=""
+          if [ "${{ steps.apply_hooks.outcome }}" = "failure" ]; then
+            extra="$(printf "\n\n**Warning:** \`pre-commit run --all-files\` failed after autoupdate. Expect follow-up fixes in this branch before CI passes.")"
+            echo "### \`pre-commit run --all-files\` failed after autoupdate" >> "$GITHUB_STEP_SUMMARY"
+            echo "See the PR body warning; update hook configs or fix findings locally." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo "extra<<PRBODYEOF"
+            echo "$extra"
+            echo "PRBODYEOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          branch: update/pre-commit-autoupdate
+          title: Auto-update pre-commit hooks
+          commit-message: Auto-update pre-commit hooks
+          body: |
+            Update versions of tools in pre-commit configs to the latest versions.
+
+            ${{ steps.pr_body_extra.outputs.extra }}
+          labels: dependencies
+      - name: Fail if hooks did not pass
+        if: steps.apply_hooks.outcome == 'failure'
+        run: |
+          echo "::error::pre-commit run --all-files failed after autoupdate (PR may still have been created)."
+          exit 1

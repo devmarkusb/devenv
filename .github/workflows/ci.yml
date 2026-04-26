@@ -14,6 +14,37 @@ permissions:
   contents: read
 
 jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            | tar xz
+          sudo install -m755 actionlint /usr/local/bin/actionlint
+
+      - name: Run actionlint
+        run: actionlint -color
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
+        with:
+          config: .github/zizmor.yml
+          inputs: .github/workflows
+          advanced-security: false
+          annotations: true
+          online-audits: false
+          min-severity: high
+          version: "1.23.1"
+
   cmake-workflow-ci:
     name: CMake — workflow preset ci (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

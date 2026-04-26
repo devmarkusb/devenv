@@ -1,0 +1,5 @@
+# zizmor (https://docs.zizmor.sh/configuration/) — used by CI and pre-commit.
+# Reusable workflows here intentionally use version tags on many actions; consumers may pin to SHAs.
+rules:
+  unpinned-uses:
+    disable: true
