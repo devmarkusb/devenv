@@ -1,16 +1,12 @@
-name: Lint Check (pre-commit)
+name: pre-commit check
 
 on:
-  # We have to use pull_request_target here as pull_request does not grant
-  # enough permission for reviewdog
-  pull_request_target:
-  push:
-    branches:
-      - main
+  workflow_call:
 
+# Inline pre-commit install + cache instead of pre-commit/action@v3.0.1, which still pins actions/cache@v4 (Node 20).
 jobs:
   pre-commit-push:
-    name: Pre-Commit check on Push
+    name: pre-commit check on Push
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' }}
 
@@ -25,14 +21,22 @@ jobs:
         with:
           python-version: 3.13
 
-        # We wish to run pre-commit on all files instead of the changes
-        # only made in the push commit.
-        #
-        # So linting error persists when there's formatting problem.
-      - uses: pre-commit/action@v3.0.1
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: pip freeze (debug)
+        run: python -m pip freeze --local
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
 
   pre-commit-pr:
-    name: Pre-Commit check on PR
+    name: pre-commit check on PR
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request_target' }}
 
@@ -60,19 +64,22 @@ jobs:
         with:
           python-version: 3.13
 
-        # we only lint on the changed file in PR.
-      - name: Get Changed Files
-        id: changed-files
-        uses: tj-actions/changed-files@v47
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
 
-        # See:
-        # https://github.com/tj-actions/changed-files?tab=readme-ov-file#using-local-git-directory-
-      - uses: pre-commit/action@v3.0.1
-        id: run-pre-commit
+      - name: pip freeze (debug)
+        run: python -m pip freeze --local
+
+      - uses: actions/cache@v5
         with:
-          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+          path: ~/.cache/pre-commit
+          key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
-        # Review dog posts the suggested change from pre-commit to the pr.
+      - id: run-pre-commit
+        name: Run pre-commit
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
+
+        # reviewdog posts suggested changes from pre-commit on the PR when hooks fail.
       - name: suggester / pre-commit
         uses: reviewdog/action-suggester@v1
         if: ${{ failure() && steps.run-pre-commit.conclusion == 'failure' }}
