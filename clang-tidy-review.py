@@ -191,11 +191,14 @@ def install_or_upgrade_latest_clang_tidy() -> None:
         if not command_exists("brew"):
             raise SystemExit("Homebrew not found. Please install Homebrew first.")
         run(["brew", "update"])
-        installed = run(
-            ["brew", "list", "--versions", "llvm"],
-            capture_output=True,
-            check=False,
-        ).returncode == 0
+        installed = (
+            run(
+                ["brew", "list", "--versions", "llvm"],
+                capture_output=True,
+                check=False,
+            ).returncode
+            == 0
+        )
         if installed:
             run(["brew", "upgrade", "llvm"], check=False)
         else:
@@ -279,7 +282,9 @@ def discover_extra_args_before() -> list[str]:
     if sys.platform != "darwin" or not command_exists("xcrun"):
         return []
     try:
-        sdk_path = run(["xcrun", "--show-sdk-path"], capture_output=True, check=True).stdout.strip()
+        sdk_path = run(
+            ["xcrun", "--show-sdk-path"], capture_output=True, check=True
+        ).stdout.strip()
     except subprocess.CalledProcessError:
         return []
     if not sdk_path:
@@ -302,9 +307,10 @@ def is_translation_unit(path: str) -> bool:
 
 def is_header(path: str) -> bool:
     return (
-        (path.startswith("include/") or path.startswith("src/") or path.startswith("examples/"))
-        and path.endswith(HEADER_SUFFIXES)
-    )
+        path.startswith("include/")
+        or path.startswith("src/")
+        or path.startswith("examples/")
+    ) and path.endswith(HEADER_SUFFIXES)
 
 
 def should_trigger_full_scan(path: str) -> bool:
@@ -355,7 +361,9 @@ def build_changed_line_filter(base_sha: str, head_sha: str) -> str:
                 current_path = path_text
             continue
 
-        if not current_path or not (is_translation_unit(current_path) or is_header(current_path)):
+        if not current_path or not (
+            is_translation_unit(current_path) or is_header(current_path)
+        ):
             continue
 
         match = hunk_pattern.match(line)
@@ -380,14 +388,21 @@ def build_changed_line_filter(base_sha: str, head_sha: str) -> str:
 
 def resolve_default_base_ref() -> str:
     for ref in ("@{upstream}", "origin/main", "main", "HEAD^"):
-        if run(["git", "rev-parse", "--verify", "--quiet", ref], check=False).returncode == 0:
+        if (
+            run(
+                ["git", "rev-parse", "--verify", "--quiet", ref], check=False
+            ).returncode
+            == 0
+        ):
             if ref == "HEAD^":
                 return git_output("rev-parse", ref)
             return git_output("merge-base", "HEAD", ref)
     return ""
 
 
-def select_changed_translation_units(base_ref: str, head_ref: str) -> tuple[list[str], str]:
+def select_changed_translation_units(
+    base_ref: str, head_ref: str
+) -> tuple[list[str], str]:
     head_sha = git_output("rev-parse", head_ref)
     base_sha = base_ref or resolve_default_base_ref()
     if base_sha == ZERO_SHA:
@@ -405,7 +420,9 @@ def select_changed_translation_units(base_ref: str, head_ref: str) -> tuple[list
         print("No changed files to analyze.")
         return [], ""
 
-    all_translation_units = [path for path in list_git_files() if is_translation_unit(path)]
+    all_translation_units = [
+        path for path in list_git_files() if is_translation_unit(path)
+    ]
     if not all_translation_units:
         print("No translation units found; skipping changed-files clang-tidy run.")
         return [], ""
@@ -416,7 +433,9 @@ def select_changed_translation_units(base_ref: str, head_ref: str) -> tuple[list
         return [], ""
 
     if any(should_trigger_full_scan(path) for path in changed_paths):
-        print("Header or build configuration changes detected; running clang-tidy on the full project.")
+        print(
+            "Header or build configuration changes detected; running clang-tidy on the full project."
+        )
         return all_translation_units, line_filter
 
     selected = [path for path in changed_paths if is_translation_unit(path)]
