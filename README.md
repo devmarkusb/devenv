@@ -97,6 +97,42 @@ Defines **`mb_devenv_install_library(name)`** for libraries. Call it with a targ
   `MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
   per-library ON/OFF).
 
+### clang-tidy-review.py
+
+Script for running clang-tidy locally or in CI with the same selection logic. Requires clang-tidy to be installed
+(use `--install` on supported platforms) and a configured build directory (`--preset` must name a valid CMake configure
+preset that produces a `compile_commands.json`).
+
+**Local usage:**
+
+```bash
+# Lint only lines changed since the upstream / origin/main / main branch
+python3 devenv/clang-tidy-review.py changed
+
+# Lint the full project
+python3 devenv/clang-tidy-review.py full
+
+# Show warning statistics instead of suppressing noise with --quiet
+python3 devenv/clang-tidy-review.py changed --show-summary
+
+# Install or upgrade to the latest available clang-tidy first
+python3 devenv/clang-tidy-review.py changed --install
+
+# Override the CMake preset (default: clang-release)
+python3 devenv/clang-tidy-review.py full --preset clang-debug
+
+# Save output to a file while also printing it
+python3 devenv/clang-tidy-review.py full --report-file /tmp/tidy.txt
+```
+
+In `changed` mode, if any changed file is a header, a CMake file, or anything under `cmake/` /
+`devenv/cmake/`, the script automatically widens the scan to the **full project** (a header change can affect
+any translation unit). The diff base defaults to the merge-base with the upstream branch; override with
+`--base <sha>`.
+
+Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
+`::add-matcher::devenv/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into inline PR annotations.
+
 ### .github/workflows
 
 #### ci.yml
@@ -212,6 +248,52 @@ jobs:
   **reviewdog** (`action-suggester`) to post suggested fixes as PR comments on failure.
 
 Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` for the PR job.
+
+### clang-tidy-review.yml
+
+**Trigger:** `workflow_call`
+
+| Input                  | Required | Description                                        |
+|------------------------|----------|----------------------------------------------------|
+| `clang_image`          | yes      | Docker image providing clang-tidy.                 |
+| `preset`               | no       | CMake configure preset (default: `clang-release`). |
+| `report_artifact_name` | no       | Artifact name for the full-scan report.            |
+
+Two jobs, gated by event:
+
+- **`changed-lines`** — on `pull_request` and `push`: runs `clang-tidy-review.py changed`, scoping analysis to
+  modified lines (or widening to the full project when headers / CMake files change).
+- **`full-project`** — on `schedule`, `workflow_dispatch`, and pushes to `main`: runs the full scan and uploads
+  the report as a workflow artifact.
+
+Consumer repos only need to define their `on:` trigger section and a single `uses:` job:
+
+```yaml
+name: clang-tidy
+
+on:
+  pull_request:
+    paths: ["**/*.cpp", "**/*.hpp", "**/*.h", ".clang-tidy", "cmake/**", "devenv/cmake/**"]
+  push:
+    branches: [main]
+    paths: ["**/*.cpp", "**/*.hpp", "**/*.h", ".clang-tidy", "cmake/**", "devenv/cmake/**"]
+  schedule:
+    - cron: "17 4 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: clang-tidy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-tidy:
+    uses: devmarkusb/devenv/.github/workflows/clang-tidy-review.yml@main
+    with:
+      clang_image: ghcr.io/bemanproject/infra-containers-clang:latest
+```
+
+The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
+workflow — no separate file needed in the consumer repo.
 
 ### .gitignore
 
