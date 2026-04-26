@@ -133,6 +133,42 @@ any translation unit). The diff base defaults to the merge-base with the upstrea
 Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
 `::add-matcher::devenv/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into inline PR annotations.
 
+### install-cppcheck.py
+
+Locates or installs cppcheck using the platform's package manager (apt, dnf, pacman, zypper, emerge,
+Homebrew, winget, choco). Used internally by `run-cppcheck.sh` but can also be called directly:
+
+```bash
+# Print the path to the detected cppcheck executable
+python3 devenv/install-cppcheck.py --print-path
+
+# Install if not present, then print the path
+python3 devenv/install-cppcheck.py --ensure --print-path
+```
+
+### run-cppcheck.sh
+
+Convenience script that wires together cmake configure, cppcheck installation, and the cppcheck run. It is
+designed to be called from the consumer's project root (either locally or from CI):
+
+```bash
+# Run with the default preset (clang-release) — cmake configure + cppcheck
+./devenv/run-cppcheck.sh
+
+# Override preset and/or build directory
+./devenv/run-cppcheck.sh clang-debug
+./devenv/run-cppcheck.sh clang-release /tmp/custom-build
+```
+
+The script:
+
+- Calls `install-cppcheck.py --ensure --print-path` to locate or install cppcheck automatically.
+- Configures cmake (`cmake -S . --preset <preset> -B <build-dir>`) to produce `compile_commands.json`.
+- Runs cppcheck with `--enable=warning,style,performance,portability`, `--check-level=exhaustive`,
+  `--inline-suppr`, `--inconclusive`, `--library=googletest`, and `--template=gcc`.
+- If `CppCheckSuppressions.txt` exists in the project root, passes it via `--suppressions-list`.
+- Excludes `_deps/` (FetchContent dependencies) from analysis.
+
 ### .github/workflows
 
 #### ci.yml
@@ -294,6 +330,44 @@ jobs:
 
 The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
 workflow — no separate file needed in the consumer repo.
+
+### cppcheck.yml
+
+**Trigger:** `workflow_call`
+
+| Input    | Required | Description                                              |
+|----------|----------|----------------------------------------------------------|
+| `preset` | no       | CMake configure preset (default: `clang-release`).       |
+
+Runs a full-project cppcheck scan on `ubuntu-latest` by calling `devenv/run-cppcheck.sh`. Consumer repos
+need only an `on:` section and a single `uses:` job — no cppcheck installation step, no inline shell:
+
+```yaml
+name: cppcheck
+
+on:
+  pull_request:
+    paths: ["**/*.cpp", "**/*.hpp", "**/*.h", "cmake/**", "devenv/cmake/**",
+            "CppCheckSuppressions.txt", "devenv/run-cppcheck.sh"]
+  push:
+    branches: [main]
+    paths: ["**/*.cpp", "**/*.hpp", "**/*.h", "cmake/**", "devenv/cmake/**",
+            "CppCheckSuppressions.txt", "devenv/run-cppcheck.sh"]
+  schedule:
+    - cron: "31 4 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: cppcheck-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cppcheck:
+    uses: devmarkusb/devenv/.github/workflows/cppcheck.yml@main
+```
+
+Place a `CppCheckSuppressions.txt` in the project root to suppress specific findings; the script picks it
+up automatically.
 
 ### .gitignore
 

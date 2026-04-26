@@ -1,0 +1,26 @@
+name: cppcheck
+
+on:
+  workflow_call:
+    inputs:
+      preset:
+        description: 'CMake configure preset (must produce compile_commands.json)'
+        type: string
+        default: 'clang-release'
+
+permissions:
+  contents: read
+
+jobs:
+  full-project:
+    name: full project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: Run cppcheck
+        shell: bash
+        run: ./devenv/run-cppcheck.sh "${{ inputs.preset }}"
