@@ -23,4 +23,6 @@ jobs:
 
       - name: Run cppcheck
         shell: bash
-        run: ./devenv/run-cppcheck.sh "${{ inputs.preset }}"
+        env:
+          PRESET: ${{ inputs.preset }}
+        run: ./devenv/run-cppcheck.sh "${PRESET}"

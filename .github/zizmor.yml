@@ -3,6 +3,9 @@
 rules:
   unpinned-uses:
     disable: true
+  unpinned-images:
+    # Reusable workflows accept the container image as a caller-supplied input; the caller pins it.
+    disable: true
   dangerous-triggers:
     # pull_request_target is intentional in pre-commit-check.yml: reviewdog needs write permissions
     # to post PR review suggestions, which pull_request does not grant. The workflow mitigates risk

@@ -1,6 +1,6 @@
 name: Lint Check (pre-commit)
 
-on:
+on: # zizmor: ignore[dangerous-triggers]
   # We have to use pull_request_target here as pull_request does not grant
   # enough permission for reviewdog
   pull_request_target:
