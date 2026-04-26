@@ -25,7 +25,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     container:
-      image: ${{ inputs.clang_image }}
+      image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-uses]
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -41,18 +41,23 @@ jobs:
 
       - name: Run clang-tidy on changed lines
         shell: bash
+        env:
+          BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA_PUSH: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          PRESET: ${{ inputs.preset }}
         run: |
           set -euo pipefail
 
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            base_sha="${{ github.event.pull_request.base.sha }}"
+            base_sha="${BASE_SHA_PR}"
           else
-            base_sha="${{ github.event.before }}"
+            base_sha="${BASE_SHA_PUSH}"
           fi
           python3 ./devenv/clang-tidy-review.py changed \
             --base "${base_sha}" \
-            --head "${{ github.sha }}" \
-            --preset "${{ inputs.preset }}"
+            --head "${HEAD_SHA}" \
+            --preset "${PRESET}"
 
   full-project:
     name: full project
@@ -62,7 +67,7 @@ jobs:
       github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     container:
-      image: ${{ inputs.clang_image }}
+      image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-uses]
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -77,6 +82,8 @@ jobs:
 
       - name: Run clang-tidy on the full codebase
         shell: bash
+        env:
+          PRESET: ${{ inputs.preset }}
         run: |
           set -euo pipefail
 
@@ -85,7 +92,7 @@ jobs:
           mkdir -p "${report_dir}"
           python3 ./devenv/clang-tidy-review.py full \
             --report-file "${report_file}" \
-            --preset "${{ inputs.preset }}"
+            --preset "${PRESET}"
 
       - name: Upload full scan report
         if: always()

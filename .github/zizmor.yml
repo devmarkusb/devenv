@@ -3,3 +3,9 @@
 rules:
   unpinned-uses:
     disable: true
+  dangerous-triggers:
+    # pull_request_target is intentional in pre-commit-check.yml: reviewdog needs write permissions
+    # to post PR review suggestions, which pull_request does not grant. The workflow mitigates risk
+    # by only running pre-commit hooks (pinned by revision) on checked-out PR code.
+    ignore:
+      - .github/workflows/pre-commit-check.yml
