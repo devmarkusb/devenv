@@ -97,6 +97,35 @@ Defines **`mb_devenv_install_library(name)`** for libraries. Call it with a targ
   `MB_DEVENV_INSTALL_CONFIG_FILE_PACKAGES` (list) or `<UPPERCASE_NAME>_INSTALL_CONFIG_FILE_PACKAGE` (
   per-library ON/OFF).
 
+#### mb-devenv-cppcheck.cmake
+
+Optional **build-time cppcheck integration** via CMake's `CMAKE_CXX_CPPCHECK`. Include it once from your
+project root `CMakeLists.txt`:
+
+```cmake
+include(devenv/cmake/mb-devenv-cppcheck.cmake)
+```
+
+Then configure with `-DMB_DEVENV_CPPCHECK=ON` to activate, and optionally
+`-DMB_DEVENV_CPPCHECK_AUTO_INSTALL=ON` to install cppcheck automatically if missing.
+
+**This is independent of `run-cppcheck.sh`.** Use one, the other, or both — they complement each other:
+
+|             | `mb-devenv-cppcheck.cmake`              | `run-cppcheck.sh`                  |
+|-------------|-----------------------------------------|------------------------------------|
+| When        | Every `cmake --build`                   | Explicitly (locally or in CI)      |
+| How         | `CMAKE_CXX_CPPCHECK` per TU             | `--project=compile_commands.json`  |
+| Speed       | Fast (no exhaustive check)              | Thorough                           |
+| Checks      | `warning,style,performance,portability` | Same + `--check-level=exhaustive`  |
+| Extra flags | `--force`                               | `--library=googletest`             |
+
+`--check-level=exhaustive` is intentionally absent from the build-time integration — it would make every
+incremental build too slow. `--force` is present because cmake may not expose every include path across all
+`#ifdef` configurations; the script uses `--project=compile_commands.json` which embeds the exact compile
+flags, so `--force` is unnecessary there. The `--enable` flag set is the same in both.
+
+`MB_DEVENV_CPPCHECK_EXECUTABLE` is set as a CMake cache variable pointing to the found/installed binary.
+
 ### clang-tidy-review.py
 
 Script for running clang-tidy locally or in CI with the same selection logic. Requires clang-tidy to be installed
