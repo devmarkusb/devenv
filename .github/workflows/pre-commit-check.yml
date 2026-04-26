@@ -11,3 +11,8 @@ on:
 jobs:
   pre-commit:
     uses: ./.github/workflows/pre-commit.yml
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write
