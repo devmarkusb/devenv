@@ -74,7 +74,9 @@ def cppcheck_candidates() -> list[Path]:
         if local_app_data:
             add(Path(local_app_data) / "Programs" / "Cppcheck" / "cppcheck.exe")
             add(Path(local_app_data) / "Programs" / "Cppcheck" / "bin" / "cppcheck.exe")
-            add(Path(local_app_data) / "Microsoft" / "WinGet" / "Links" / "cppcheck.exe")
+            add(
+                Path(local_app_data) / "Microsoft" / "WinGet" / "Links" / "cppcheck.exe"
+            )
         program_data = os.environ.get("ProgramData", "")
         if program_data:
             add(Path(program_data) / "chocolatey" / "bin" / "cppcheck.exe")
@@ -160,7 +162,9 @@ def install_on_linux() -> None:
 
 def install_on_macos() -> None:
     if not command_exists("brew"):
-        raise SystemExit("Homebrew not found. Install cppcheck manually or install Homebrew first.")
+        raise SystemExit(
+            "Homebrew not found. Install cppcheck manually or install Homebrew first."
+        )
     install_with_brew()
 
 
@@ -183,7 +187,9 @@ def install_with_winget() -> None:
 
 
 def install_with_choco() -> None:
-    listed = run(["choco", "list", "--local-only", "cppcheck"], check=False, capture_output=True)
+    listed = run(
+        ["choco", "list", "--local-only", "cppcheck"], check=False, capture_output=True
+    )
     if listed.returncode == 0 and "cppcheck" in listed.stdout.lower():
         run(["choco", "upgrade", "cppcheck", "-y"])
         return
