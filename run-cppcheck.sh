@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd -- "${script_dir}/.." && pwd)"
+script_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(CDPATH= cd -- "${script_dir}/.." && pwd)"
 
 preset="${1:-clang-release}"
 build_dir="${2:-${repo_root}/build/${preset}}"
