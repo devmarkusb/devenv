@@ -179,6 +179,16 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           gcovr --verbose --config gcovr.cfg .
           cat coverage.json
+      - name: Generate HTML Coverage Report
+        if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
+        shell: bash
+        run: gcovr --html-details coverage/index.html --config gcovr.cfg .
+      - name: Upload HTML Coverage Artifact
+        if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
       - name: Upload Coverage Data to Coveralls
         if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
         uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
