@@ -182,7 +182,9 @@ jobs:
       - name: Generate HTML Coverage Report
         if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
         shell: bash
-        run: gcovr --html-details coverage/index.html --config gcovr.cfg .
+        run: |
+          mkdir -p coverage
+          gcovr --html-details coverage/index.html --config gcovr.cfg .
       - name: Upload HTML Coverage Artifact
         if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
         uses: actions/upload-artifact@v4
