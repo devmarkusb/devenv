@@ -248,7 +248,8 @@ referenced inside these workflows resolve correctly.
 Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
 gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version>` Docker images; Apple Clang uses
 `macos-latest`; MSVC uses `windows-latest`. Supported test-type suffixes: `Default`, `TSan`, `MSan`, `MaxSan`,
-`MaxWarn`, `MaxWarnMsvc`, `Dynamic`, `Coverage`. Coverage rows run `gcovr` and upload to Coveralls.
+`MaxWarn`, `MaxWarnMsvc`, `Dynamic`, `Coverage`. Coverage rows run `gcovr` and upload to [Coveralls](https://coveralls.io)
+(activate the repo at coveralls.io and results appear at `https://coveralls.io/github/<org>/<repo>`).
 
 **Consumer assumptions:** `devenv/cmake/toolchains/*.cmake` and
 `devenv/cmake/fetch-content-from-lockfile.cmake` present; Ninja Multi-Config generator.
