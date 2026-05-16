@@ -264,9 +264,9 @@ referenced inside these workflows resolve correctly.
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                             |
-|--------------------------|----------|-----------------------------------------|
-| `matrix_config`          | yes      | Compiler-keyed JSON matrix (see below). |
+| Input                    | Required | Description                                                  |
+|--------------------------|----------|--------------------------------------------------------------|
+| `matrix_config`          | yes      | Compiler-keyed JSON matrix (see below).                      |
 | `default_setup_script`   | no       | Repo-relative bash script for rows that omit `setup_script`. |
 
 Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
@@ -295,14 +295,14 @@ Inline `setup` defaults to `pwsh` on `msvc` jobs and `bash` otherwise unless `se
 
 Each matrix object supports:
 
-| Field            | Required | Description                                                                                    |
-|------------------|----------|------------------------------------------------------------------------------------------------|
-| `preset`         | yes      | CMake workflow preset name passed to `cmake --workflow --preset`.                              |
-| `runner`         | no       | GitHub-hosted runner (default `ubuntu-latest`). Required for Windows/MSVC.                     |
-| `image`          | no       | Job `container:` image (steps run inside the container).                                       |
-| `setup_script`   | no       | Repo-relative bash script run after checkout (install system packages, etc.).                  |
-| `setup`          | no       | Inline shell commands for the same purpose (use `setup_shell` on Windows if needed).           |
-| `setup_shell`    | no       | Shell for `setup` only (default `bash`, or `pwsh` when `runner` starts with `windows`).      |
+| Field            | Required | Description                                                                               |
+|------------------|----------|-------------------------------------------------------------------------------------------|
+| `preset`         | yes      | CMake workflow preset name passed to `cmake --workflow --preset`.                         |
+| `runner`         | no       | GitHub-hosted runner (default `ubuntu-latest`). Required for Windows/MSVC.                |
+| `image`          | no       | Job `container:` image (steps run inside the container).                                  |
+| `setup_script`   | no       | Repo-relative bash script run after checkout (install system packages, etc.).             |
+| `setup`          | no       | Inline shell commands for the same purpose (use `setup_shell` on Windows if needed).      |
+| `setup_shell`    | no       | Shell for `setup` only (default `bash`, or `pwsh` when `runner` starts with `windows`).   |
 
 Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
 CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
@@ -328,16 +328,16 @@ For one-off packages, use per-matrix `setup` / `setup_script` instead of forking
 
 **Trigger:** `workflow_call`
 
-| Input            | Required | Description                                            |
-|------------------|----------|--------------------------------------------------------|
-| `image`          | yes      | Container image for building the library.              |
-| `cxx_standard`   | yes      | `CMAKE_CXX_STANDARD` value (e.g. `20`).                |
-| `namespace`      | yes      | CMake namespace / package prefix (e.g. `mycompany`).   |
-| `include_header` | no       | Full include path for the consumer smoke test.         |
-| `main_header`    | no       | Header file name; defaults to `<library>.hpp`.         |
+| Input            | Required | Description                                                    |
+|------------------|----------|----------------------------------------------------------------|
+| `image`          | yes      | Container image for building the library.                      |
+| `cxx_standard`   | yes      | `CMAKE_CXX_STANDARD` value (e.g. `20`).                        |
+| `namespace`      | yes      | CMake namespace / package prefix (e.g. `mycompany`).           |
+| `include_header` | no       | Full include path for the consumer smoke test.                 |
+| `main_header`    | no       | Header file name; defaults to `<library>.hpp`.                 |
 | `setup_script`   | no       | Repo-relative bash script run after checkout in the container. |
-| `setup`          | no       | Inline shell commands before CMake configure.          |
-| `setup_shell`    | no       | Shell for `setup` (default `bash`).                    |
+| `setup`          | no       | Inline shell commands before CMake configure.                  |
+| `setup_shell`    | no       | Shell for `setup` (default `bash`).                            |
 
 Configures the project with the FetchContent lockfile helper, resolves the library name from the CMake file API
 codemodel reply, installs to `dist/`, then builds a minimal `find_package` consumer to verify the installation.

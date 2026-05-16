@@ -198,13 +198,19 @@ def install_with_vcpkg(components: list[str], triplet: str | None) -> Path:
 
 def install_with_brew() -> Path:
     if not command_exists("brew"):
-        raise SystemExit("Homebrew not found. Install Boost manually or install Homebrew first.")
+        raise SystemExit(
+            "Homebrew not found. Install Boost manually or install Homebrew first."
+        )
     run(["brew", "install", "boost"])
-    prefix_text = run(["brew", "--prefix", "boost"], check=True, capture_output=True).stdout.strip()
+    prefix_text = run(
+        ["brew", "--prefix", "boost"], check=True, capture_output=True
+    ).stdout.strip()
     prefix = Path(prefix_text).resolve()
     cmake_prefix = boost_cmake_prefix(prefix)
     if cmake_prefix is None:
-        raise SystemExit(f"brew install boost completed but CMake config not found under {prefix}.")
+        raise SystemExit(
+            f"brew install boost completed but CMake config not found under {prefix}."
+        )
     return cmake_prefix
 
 
@@ -215,7 +221,9 @@ def install_with_apt() -> Path:
     prefixes = detect_cmake_prefix_paths()
     if prefixes:
         return prefixes[0]
-    raise SystemExit("apt install libboost-all-dev completed but Boost CMake config was not found.")
+    raise SystemExit(
+        "apt install libboost-all-dev completed but Boost CMake config was not found."
+    )
 
 
 def install_boost(components: list[str], triplet: str | None) -> Path:
@@ -236,11 +244,7 @@ def append_github_env_cmake_prefix_path(prefix: Path) -> None:
         return
     prefix_text = str(prefix)
     existing = os.environ.get("CMAKE_PREFIX_PATH", "")
-    merged = (
-        f"{prefix_text}{os.pathsep}{existing}"
-        if existing
-        else prefix_text
-    )
+    merged = f"{prefix_text}{os.pathsep}{existing}" if existing else prefix_text
     with open(github_env, "a", encoding="utf-8") as env_file:
         env_file.write(f"CMAKE_PREFIX_PATH={merged}\n")
     os.environ["CMAKE_PREFIX_PATH"] = merged
