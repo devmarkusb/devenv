@@ -165,9 +165,9 @@ Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can 
 ### install-boost.py / install-boost.sh
 
 Locates or installs **Boost** for CMake **`find_package(Boost CONFIG)`** (used by consumers such as
-**uiwrap** with the `own` backend). Prefers **vcpkg** when `/opt/vcpkg/vcpkg` or
-`VCPKG_INSTALLATION_ROOT` is present (Beman CI images, GitHub `windows-latest`); otherwise
-**Homebrew** on macOS or **apt** `libboost-all-dev` on Debian/Ubuntu.
+**uiwrap** with the `own` backend). **Linux:** `apt` `libboost-all-dev` when available (including
+Beman CI containers, even if `/opt/vcpkg` exists). **macOS:** Homebrew. **Windows:** vcpkg via
+`VCPKG_INSTALLATION_ROOT`. Falls back to vcpkg on Linux only when `apt-get` is unavailable.
 
 **Local usage:**
 

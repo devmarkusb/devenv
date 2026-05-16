@@ -229,12 +229,13 @@ def install_with_apt() -> Path:
 def install_boost(components: list[str], triplet: str | None) -> Path:
     if sys.platform == "darwin":
         return install_with_brew()
-    if vcpkg_executable() is not None:
-        return install_with_vcpkg(components, triplet)
+    # Beman/Linux CI images ship /opt/vcpkg but apt is faster and avoids huge vcpkg dep trees.
     if sys.platform.startswith("linux") and command_exists("apt-get"):
         return install_with_apt()
+    if vcpkg_executable() is not None:
+        return install_with_vcpkg(components, triplet)
     raise SystemExit(
-        "Unable to install Boost automatically: need vcpkg, Homebrew (macOS), or apt-get (Linux)."
+        "Unable to install Boost automatically: need apt-get (Linux), vcpkg, or Homebrew (macOS)."
     )
 
 
