@@ -241,15 +241,22 @@ referenced inside these workflows resolve correctly.
 
 **Trigger:** `workflow_call`
 
-| Input           | Required | Description                             |
-|-----------------|----------|-----------------------------------------|
-| `matrix_config` | yes      | Compiler-keyed JSON matrix (see below). |
+| Input                    | Required | Description                             |
+|--------------------------|----------|-----------------------------------------|
+| `matrix_config`          | yes      | Compiler-keyed JSON matrix (see below). |
+| `default_setup_script`   | no       | Repo-relative bash script for rows that omit `setup_script`. |
 
 Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
 gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version>` Docker images; Apple Clang uses
 `macos-latest`; MSVC uses `windows-latest`. Supported test-type suffixes: `Default`, `TSan`, `MSan`, `MaxSan`,
 `MaxWarn`, `MaxWarnMsvc`, `Dynamic`, `Coverage`. Coverage rows run `gcovr` and upload to [Coveralls](https://coveralls.io)
 (activate the repo at coveralls.io and results appear at `https://coveralls.io/github/<org>/<repo>`).
+
+Optional setup fields (`setup_script`, `setup`, `setup_shell`) may appear at the **top level** of `matrix_config` (applied
+to every row), on a compiler-branch array element (the object with `"versions"`), or on nested objects in the `tests`
+tree — inner levels override outer (not on individual test name strings such as `"Debug.Default"`). Consumer setup runs
+after checkout and before MSVC/macOS/CMake setup.
+Inline `setup` defaults to `pwsh` on `msvc` jobs and `bash` otherwise unless `setup_shell` is set.
 
 **Consumer assumptions:** `devenv/cmake/toolchains/*.cmake` and
 `devenv/cmake/fetch-content-from-lockfile.cmake` present; Ninja Multi-Config generator.
@@ -258,12 +265,52 @@ gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version
 
 **Trigger:** `workflow_call`
 
-| Input           | Required | Description                                                                                               |
-|-----------------|----------|-----------------------------------------------------------------------------------------------------------|
-| `matrix_config` | yes      | JSON **array** of `{"preset":"ci","runner":"ubuntu-latest"}` or `{"preset":"ci","image":"..."}` objects.  |
+| Input                    | Required | Description                                                                                               |
+|--------------------------|----------|-----------------------------------------------------------------------------------------------------------|
+| `matrix_config`          | yes      | JSON **array** of preset matrix objects (see below).                                                      |
+| `default_setup_script`   | no       | Repo-relative bash script for entries that omit `setup_script` (e.g. `.github/ci/preset-setup.sh`).       |
 
-Runs `cmake --workflow --preset <name>` for each matrix entry. For Windows/MSVC set `"runner":"windows-latest"` — MSVC
-setup is gated on the runner name.
+Each matrix object supports:
+
+| Field            | Required | Description                                                                                    |
+|------------------|----------|------------------------------------------------------------------------------------------------|
+| `preset`         | yes      | CMake workflow preset name passed to `cmake --workflow --preset`.                              |
+| `runner`         | no       | GitHub-hosted runner (default `ubuntu-latest`). Required for Windows/MSVC.                     |
+| `image`          | no       | Job `container:` image (steps run inside the container).                                       |
+| `setup_script`   | no       | Repo-relative bash script run after checkout (install system packages, etc.).                  |
+| `setup`          | no       | Inline shell commands for the same purpose (use `setup_shell` on Windows if needed).           |
+| `setup_shell`    | no       | Shell for `setup` only (default `bash`, or `pwsh` when `runner` starts with `windows`).      |
+
+Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
+CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
+
+Example with Boost on Ubuntu and a shared setup script:
+
+```yaml
+jobs:
+  presets:
+    uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
+    with:
+      default_setup_script: .github/ci/preset-setup.sh
+      matrix_config: |
+        [
+          {"preset": "ci", "runner": "ubuntu-latest"},
+          {"preset": "ci", "image": "ghcr.io/org/custom-ci:latest", "setup": "apt-get update && apt-get install -y libboost-dev"}
+        ]
+```
+
+`.github/ci/preset-setup.sh` (consumer repo):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+if command -v apt-get >/dev/null; then
+  sudo apt-get update
+  sudo apt-get install -y libboost-all-dev
+elif command -v brew >/dev/null; then
+  brew install boost
+fi
+```
 
 ### install-test.yml
 
@@ -276,9 +323,13 @@ setup is gated on the runner name.
 | `namespace`      | yes      | CMake namespace / package prefix (e.g. `mycompany`).   |
 | `include_header` | no       | Full include path for the consumer smoke test.         |
 | `main_header`    | no       | Header file name; defaults to `<library>.hpp`.         |
+| `setup_script`   | no       | Repo-relative bash script run after checkout in the container. |
+| `setup`          | no       | Inline shell commands before CMake configure.          |
+| `setup_shell`    | no       | Shell for `setup` (default `bash`).                    |
 
 Configures the project with the FetchContent lockfile helper, resolves the library name from the CMake file API
 codemodel reply, installs to `dist/`, then builds a minimal `find_package` consumer to verify the installation.
+Consumer setup runs after checkout and before the library configure step.
 
 ### update-pre-commit.yml
 

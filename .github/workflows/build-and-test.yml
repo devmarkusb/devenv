@@ -8,8 +8,16 @@ on:
           Compiler-centric JSON object: each key is a compiler name (e.g. gcc, clangNN, appleclang, msvc).
           Values are arrays of objects with "versions", each linking to nested "tests" / cxxversions / stdlibs / test strings.
           Consumer repos must provide devenv/cmake (toolchains, fetch-content-from-lockfile) and Ninja-friendly layout.
+          Optional top-level or per-branch keys: setup_script, setup, setup_shell (see README).
         type: string
         required: true
+      default_setup_script:
+        description: >-
+          Optional repo-relative bash script when a matrix row omits setup_script (e.g. .github/ci/build-setup.sh).
+          Runs after checkout inside the job container (if any), before MSVC/macOS/CMake setup.
+        type: string
+        required: false
+        default: ''
 
 jobs:
   configure_test_matrix:
@@ -28,19 +36,42 @@ jobs:
           import os
           import sys
 
+          SETUP_KEYS = ("setup_script", "setup", "setup_shell")
+
+          def pick_setup(source):
+              if not isinstance(source, dict):
+                  return {}
+              return {
+                  key: source[key]
+                  for key in SETUP_KEYS
+                  if source.get(key)
+              }
+
+          def merge_setup(*sources):
+              merged = {}
+              for source in sources:
+                  merged.update(pick_setup(source))
+              return merged
+
           input_data = json.loads(os.environ["MATRIX_CONFIG"])
+          global_setup = pick_setup(input_data)
           output_list = []
 
           image_prefix = "ghcr.io/bemanproject/infra-containers-"
           for compiler, compiler_tests in input_data.items():
+              if compiler in SETUP_KEYS:
+                  continue
               for compiler_test in compiler_tests:
+                  branch_setup = merge_setup(global_setup, compiler_test)
                   for version in compiler_test["versions"]:
                       image = None
                       if compiler == "gcc" or compiler.startswith("clang"):
                           image = image_prefix + compiler + ":" + version
                       for versions_test in compiler_test["tests"]:
+                          versions_setup = merge_setup(branch_setup, versions_test)
                           for cxxversion in versions_test["cxxversions"]:
                               for cxxversion_test in versions_test["tests"]:
+                                  cxx_setup = merge_setup(versions_setup, cxxversion_test)
                                   for stdlib in cxxversion_test["stdlibs"]:
                                       for stdlib_test in cxxversion_test["tests"]:
                                           test = {
@@ -51,6 +82,7 @@ jobs:
                                               "test": stdlib_test,
                                               # null => run on host runner; string => use job container (Docker)
                                               "image": image,
+                                              **cxx_setup,
                                           }
                                           output_list.append(test)
           json_string = json.dumps(output_list)
@@ -74,6 +106,25 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: 'recursive'
+      - name: Consumer setup (script)
+        if: matrix.config.setup_script || inputs.default_setup_script
+        shell: bash
+        env:
+          SETUP_SCRIPT: ${{ matrix.config.setup_script || inputs.default_setup_script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+            exit 1
+          fi
+          bash "${SETUP_SCRIPT}"
+      - name: Consumer setup (commands)
+        if: matrix.config.setup
+        shell: >-
+          ${{ matrix.config.setup_shell
+              || (matrix.config.compiler == 'msvc' && 'pwsh')
+              || 'bash' }}
+        run: ${{ matrix.config.setup }}
       - name: Setup MSVC
         if: matrix.config.compiler == 'msvc'
         uses: TheMrMilchmann/setup-msvc-dev@v4
