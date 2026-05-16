@@ -118,12 +118,19 @@ jobs:
             exit 1
           fi
           bash "${SETUP_SCRIPT}"
-      - name: Consumer setup (commands)
-        if: matrix.config.setup
-        shell: >-
-          ${{ matrix.config.setup_shell
-              || (matrix.config.compiler == 'msvc' && 'pwsh')
-              || 'bash' }}
+      - name: Consumer setup (commands, bash)
+        if: >-
+          matrix.config.setup &&
+          (matrix.config.setup_shell == 'bash' ||
+           (!matrix.config.setup_shell && matrix.config.compiler != 'msvc'))
+        shell: bash
+        run: ${{ matrix.config.setup }}
+      - name: Consumer setup (commands, pwsh)
+        if: >-
+          matrix.config.setup &&
+          (matrix.config.setup_shell == 'pwsh' ||
+           (!matrix.config.setup_shell && matrix.config.compiler == 'msvc'))
+        shell: pwsh
         run: ${{ matrix.config.setup }}
       - name: Setup MSVC
         if: matrix.config.compiler == 'msvc'

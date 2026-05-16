@@ -46,12 +46,21 @@ jobs:
             exit 1
           fi
           bash "${SETUP_SCRIPT}"
-      - name: Consumer setup (commands)
-        if: matrix.presets.setup
-        shell: >-
-          ${{ matrix.presets.setup_shell
-              || (startsWith(matrix.presets.runner || '', 'windows') && 'pwsh')
-              || 'bash' }}
+      - name: Consumer setup (commands, bash)
+        if: >-
+          matrix.presets.setup &&
+          (matrix.presets.setup_shell == 'bash' ||
+           (!matrix.presets.setup_shell &&
+            !startsWith(matrix.presets.runner || 'ubuntu-latest', 'windows')))
+        shell: bash
+        run: ${{ matrix.presets.setup }}
+      - name: Consumer setup (commands, pwsh)
+        if: >-
+          matrix.presets.setup &&
+          (matrix.presets.setup_shell == 'pwsh' ||
+           (!matrix.presets.setup_shell &&
+            startsWith(matrix.presets.runner || 'ubuntu-latest', 'windows')))
+        shell: pwsh
         run: ${{ matrix.presets.setup }}
       - name: Setup build environment
         if: matrix.presets.runner
