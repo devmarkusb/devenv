@@ -85,6 +85,16 @@ Lockfile format: a JSON object with a `dependencies` array. Each entry requires 
 
 This gives reproducible builds without relying on system packages (e.g., GTest).
 
+#### pre-commit (mb-pre-commit)
+
+When you `add_subdirectory(devenv)` from a parent repo, `devenv/CMakeLists.txt` calls
+`mb_pre_commit_setup_subdirectory()` (mb-pre-commit **v2.5.0+**, via `fetchcontent-lockfile.json`) so commits made
+**inside `devenv/`** get hooks and a `.venv` there. Your parent should still call `mb_pre_commit_setup()` for its own
+tree. The parent hook does **not** run on submodule commits.
+
+After updating the `devenv` submodule, re-run CMake in the parent so hooks/venv refresh. Sweep target in the submodule:
+`mb-pre-commit-sweep-devenv` (default name from `CMAKE_PROJECT_NAME`).
+
 #### mb-devenv-install-library-config.cmake
 
 Defines **`mb_devenv_install_library(name)`** for libraries. Call it with a target name of the form
