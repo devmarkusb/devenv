@@ -9,5 +9,7 @@ project(devenv LANGUAGES NONE)
 if(PROJECT_IS_TOP_LEVEL)
     mb_pre_commit_setup()
 else()
-    mb_pre_commit_setup_subdirectory()
+    mb_pre_commit_setup_subdirectory(
+        PRE_COMMIT_SWEEP_TARGET mb-pre-commit-sweep-devenv
+    )
 endif()
