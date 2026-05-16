@@ -162,6 +162,29 @@ any translation unit). The diff base defaults to the merge-base with the upstrea
 Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
 `::add-matcher::devenv/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into inline PR annotations.
 
+### install-boost.py / install-boost.sh
+
+Locates or installs **Boost** for CMake **`find_package(Boost CONFIG)`** (used by consumers such as
+**uiwrap** with the `own` backend). Prefers **vcpkg** when `/opt/vcpkg/vcpkg` or
+`VCPKG_INSTALLATION_ROOT` is present (Beman CI images, GitHub `windows-latest`); otherwise
+**Homebrew** on macOS or **apt** `libboost-all-dev` on Debian/Ubuntu.
+
+**Local usage:**
+
+```bash
+# Install if missing, print the CMake prefix
+python3 devenv/install-boost.py --ensure --print-prefix-path
+
+# CI helper (also appends CMAKE_PREFIX_PATH to GITHUB_ENV when set)
+./devenv/install-boost.sh
+```
+
+Optional flags: `--components property-tree` (vcpkg package names `boost-<component>`),
+`--vcpkg-triplet x64-linux`.
+
+**CI usage:** pass `default_setup_script: devenv/install-boost.sh` to
+`preset-test.yml` or `build-and-test.yml` (no forked “with-boost” workflows required).
+
 ### install-cppcheck.py
 
 Locates or installs cppcheck using the platform's package manager (apt, dnf, pacman, zypper, emerge,
@@ -284,33 +307,22 @@ Each matrix object supports:
 Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
 CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
 
-Example with Boost on Ubuntu and a shared setup script:
+Example with Boost (shared devenv helper):
 
 ```yaml
 jobs:
   presets:
     uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
     with:
-      default_setup_script: .github/ci/preset-setup.sh
+      default_setup_script: devenv/install-boost.sh
       matrix_config: |
         [
           {"preset": "ci", "runner": "ubuntu-latest"},
-          {"preset": "ci", "image": "ghcr.io/org/custom-ci:latest", "setup": "apt-get update && apt-get install -y libboost-dev"}
+          {"preset": "ci", "image": "ghcr.io/bemanproject/infra-containers-gcc:latest"}
         ]
 ```
 
-`.github/ci/preset-setup.sh` (consumer repo):
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-if command -v apt-get >/dev/null; then
-  sudo apt-get update
-  sudo apt-get install -y libboost-all-dev
-elif command -v brew >/dev/null; then
-  brew install boost
-fi
-```
+For one-off packages, use per-matrix `setup` / `setup_script` instead of forking the reusable workflow.
 
 ### install-test.yml
 
