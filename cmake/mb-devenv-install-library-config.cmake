@@ -119,14 +119,19 @@ function(mb_devenv_install_library name)
 
         include(CMakePackageConfigHelpers)
 
-        find_file(
-            config_file_template
-            NAMES "${package_name}-config.cmake.in"
-            PATHS "${PROJECT_SOURCE_DIR}/cmake"
-            NO_DEFAULT_PATH
-            NO_CACHE
-            REQUIRED
+        # Host-side source templates (not sysroot artifacts). find_file() honors
+        # CMAKE_FIND_ROOT_PATH_MODE_INCLUDE, which is ONLY for Android/cross builds,
+        # so resolve the path explicitly instead.
+        set(config_file_template
+            "${PROJECT_SOURCE_DIR}/cmake/${package_name}-config.cmake.in"
         )
+        if(NOT EXISTS "${config_file_template}")
+            message(
+                FATAL_ERROR
+                "mb_devenv_install_library: Config template not found: "
+                "'${config_file_template}' (PROJECT_SOURCE_DIR='${PROJECT_SOURCE_DIR}')"
+            )
+        endif()
         set(config_package_file
             "${CMAKE_CURRENT_BINARY_DIR}/${package_name}-config.cmake"
         )
