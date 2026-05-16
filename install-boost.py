@@ -48,7 +48,7 @@ def unix_privilege_prefix() -> list[str]:
     return []
 
 
-def boost_config_dirs(prefix: Path) -> list[Path]:
+def boost_lib_cmake_config_dirs(prefix: Path) -> list[Path]:
     roots = [prefix / "lib" / "cmake"]
     lib_dir = prefix / "lib"
     if lib_dir.is_dir():
@@ -61,7 +61,7 @@ def boost_config_dirs(prefix: Path) -> list[Path]:
     return sorted(found)
 
 
-def prefix_from_boost_config(config_dir: Path) -> Path:
+def prefix_from_lib_cmake_config(config_dir: Path) -> Path:
     cmake_dir = config_dir.parent
     lib_entry = cmake_dir.parent
     if lib_entry.name == "lib":
@@ -71,6 +71,19 @@ def prefix_from_boost_config(config_dir: Path) -> Path:
     return lib_entry.parent
 
 
+def boost_cmake_prefix(prefix: Path) -> Path | None:
+    """Return CMAKE_PREFIX_PATH for Boost CONFIG mode, or None if not present."""
+    resolved = prefix.expanduser().resolve()
+    lib_configs = boost_lib_cmake_config_dirs(resolved)
+    if lib_configs:
+        return prefix_from_lib_cmake_config(lib_configs[0])
+    if (resolved / "share" / "boost" / "BoostConfig.cmake").is_file():
+        return resolved
+    if any(resolved.glob("share/**/BoostConfig.cmake")):
+        return resolved
+    return None
+
+
 def detect_cmake_prefix_paths() -> list[Path]:
     prefixes: list[Path] = []
     seen: set[Path] = set()
@@ -78,15 +91,14 @@ def detect_cmake_prefix_paths() -> list[Path]:
     def add(prefix: Path | None) -> None:
         if prefix is None:
             return
-        resolved = prefix.expanduser().resolve()
-        configs = boost_config_dirs(resolved)
-        if not configs:
+        install_prefix = boost_cmake_prefix(prefix)
+        if install_prefix is None:
             return
-        install_prefix = prefix_from_boost_config(configs[0])
-        if install_prefix in seen:
+        resolved = install_prefix.resolve()
+        if resolved in seen:
             return
-        seen.add(install_prefix)
-        prefixes.append(install_prefix)
+        seen.add(resolved)
+        prefixes.append(resolved)
 
     for env_name in ("CMAKE_PREFIX_PATH", "BOOST_ROOT"):
         raw = os.environ.get(env_name, "")
@@ -176,11 +188,12 @@ def install_with_vcpkg(components: list[str], triplet: str | None) -> Path:
 
     vcpkg_root = vcpkg.parent
     prefix = (vcpkg_root / "installed" / triplet).resolve()
-    if not boost_config_dirs(prefix):
+    cmake_prefix = boost_cmake_prefix(prefix)
+    if cmake_prefix is None:
         raise SystemExit(
             f"vcpkg install finished but Boost CMake config was not found under {prefix}."
         )
-    return prefix
+    return cmake_prefix
 
 
 def install_with_brew() -> Path:
@@ -189,9 +202,10 @@ def install_with_brew() -> Path:
     run(["brew", "install", "boost"])
     prefix_text = run(["brew", "--prefix", "boost"], check=True, capture_output=True).stdout.strip()
     prefix = Path(prefix_text).resolve()
-    if not boost_config_dirs(prefix):
+    cmake_prefix = boost_cmake_prefix(prefix)
+    if cmake_prefix is None:
         raise SystemExit(f"brew install boost completed but CMake config not found under {prefix}.")
-    return prefix
+    return cmake_prefix
 
 
 def install_with_apt() -> Path:
