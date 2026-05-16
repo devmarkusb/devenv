@@ -7,7 +7,7 @@ project(devenv LANGUAGES NONE)
 # (submodule commits use devenv/.git/hooks, not the parent). Parent must still fetch
 # mb_pre_commit via its lockfile so mb_pre_commit_setup_subdirectory is defined.
 if(PROJECT_IS_TOP_LEVEL)
-    mb_pre_commit_setup(PRE_COMMIT_INSTALL_EXAMPLE_CONFIG OFF)
+    mb_pre_commit_setup()
 else()
-    mb_pre_commit_setup_subdirectory(PRE_COMMIT_INSTALL_EXAMPLE_CONFIG OFF)
+    mb_pre_commit_setup_subdirectory()
 endif()
