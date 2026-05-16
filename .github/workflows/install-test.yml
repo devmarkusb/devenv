@@ -23,6 +23,23 @@ on:
         description: 'Name of the main header of the project'
         type: string
         required: false
+      setup_script:
+        description: >-
+          Optional repo-relative bash script run after checkout inside the container
+          (e.g. .github/ci/install-test-setup.sh).
+        type: string
+        required: false
+        default: ''
+      setup:
+        description: Optional inline shell commands run after checkout (before CMake configure).
+        type: string
+        required: false
+        default: ''
+      setup_shell:
+        description: Shell for setup (default bash).
+        type: string
+        required: false
+        default: bash
 
 jobs:
   test-install:
@@ -33,6 +50,22 @@ jobs:
     - uses: actions/checkout@v6
       with:
         submodules: 'recursive'
+    - name: Consumer setup (script)
+      if: inputs.setup_script
+      shell: bash
+      env:
+        SETUP_SCRIPT: ${{ inputs.setup_script }}
+      run: |
+        set -euo pipefail
+        if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+          echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+          exit 1
+        fi
+        bash "${SETUP_SCRIPT}"
+    - name: Consumer setup (commands)
+      if: inputs.setup
+      shell: ${{ inputs.setup_shell }}
+      run: ${{ inputs.setup }}
     - name: Configure CMake (Library)
       env:
         CXX_STANDARD: ${{ inputs.cxx_standard }}

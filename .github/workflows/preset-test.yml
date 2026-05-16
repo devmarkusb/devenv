@@ -9,9 +9,17 @@ on:
       matrix_config:
         description: >-
           JSON array of objects, e.g. {"preset":"ci","runner":"ubuntu-latest"} or {"preset":"ci","image":"..."}.
+          Optional per entry: "setup_script" (repo-relative bash script), "setup" (inline shell), "setup_shell" (override shell).
           For Windows/MSVC use "runner":"windows-latest" (MSVC setup uses startsWith(runner, 'windows')).
         type: string
         required: true
+      default_setup_script:
+        description: >-
+          Optional repo-relative setup script when a matrix entry omits setup_script (e.g. .github/ci/preset-setup.sh).
+          Runs after checkout inside the job container (if any), before CMake/MSVC setup.
+        type: string
+        required: false
+        default: ''
 
 jobs:
   preset_test_matrix:
@@ -26,6 +34,25 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
+      - name: Consumer setup (script)
+        if: matrix.presets.setup_script || inputs.default_setup_script
+        shell: bash
+        env:
+          SETUP_SCRIPT: ${{ matrix.presets.setup_script || inputs.default_setup_script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+            exit 1
+          fi
+          bash "${SETUP_SCRIPT}"
+      - name: Consumer setup (commands)
+        if: matrix.presets.setup
+        shell: >-
+          ${{ matrix.presets.setup_shell
+              || (startsWith(matrix.presets.runner || '', 'windows') && 'pwsh')
+              || 'bash' }}
+        run: ${{ matrix.presets.setup }}
       - name: Setup build environment
         if: matrix.presets.runner
         uses: lukka/get-cmake@6c740684eca256565af86fb8b8fdf43dd3f6fbc0 # v4.3.0
