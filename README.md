@@ -392,11 +392,11 @@ Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` f
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                                        |
-|--------------------------|----------|----------------------------------------------------|
-| `clang_image`            | yes      | Docker image providing clang-tidy.                 |
-| `preset`                 | no       | CMake configure preset (default: `clang-release`). |
-| `report_artifact_name`   | no       | Artifact name for the full-scan report.            |
+| Input                    | Required | Description                                              |
+|--------------------------|----------|----------------------------------------------------------|
+| `clang_image`            | yes      | Docker image providing clang-tidy.                       |
+| `preset`                 | no       | CMake configure preset (default: `clang-release`).       |
+| `report_artifact_name`   | no       | Artifact name for the full-scan report.                  |
 | `default_setup_script`   | no       | Repo-relative bash script before configure (e.g. Boost). |
 
 Two jobs, gated by event:
