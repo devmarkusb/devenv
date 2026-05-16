@@ -51,7 +51,7 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Consumer setup (script)
-      if: inputs.setup_script
+      if: ${{ inputs.setup_script != '' }}
       shell: bash
       env:
         SETUP_SCRIPT: ${{ inputs.setup_script }}
@@ -63,13 +63,19 @@ jobs:
         fi
         bash "${SETUP_SCRIPT}"
     - name: Consumer setup (commands, bash)
-      if: inputs.setup && inputs.setup_shell != 'pwsh'
+      if: ${{ inputs.setup != '' && inputs.setup_shell != 'pwsh' }}
       shell: bash
-      run: ${{ inputs.setup }}
+      env:
+        SETUP: ${{ inputs.setup }}
+      run: |
+        ${SETUP}
     - name: Consumer setup (commands, pwsh)
-      if: inputs.setup && inputs.setup_shell == 'pwsh'
+      if: ${{ inputs.setup != '' && inputs.setup_shell == 'pwsh' }}
       shell: pwsh
-      run: ${{ inputs.setup }}
+      env:
+        SETUP: ${{ inputs.setup }}
+      run: |
+        $env:SETUP
     - name: Configure CMake (Library)
       env:
         CXX_STANDARD: ${{ inputs.cxx_standard }}
