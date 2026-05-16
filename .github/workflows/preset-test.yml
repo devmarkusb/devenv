@@ -29,7 +29,7 @@ jobs:
         presets: ${{ fromJSON(inputs.matrix_config) }}
     name: "Preset: ${{ matrix.presets.preset }} on ${{ matrix.presets.runner || 'ubuntu-latest' }}"
     runs-on: ${{ matrix.presets.runner || 'ubuntu-latest' }}
-    container: ${{ matrix.presets.image }}
+    container: ${{ matrix.presets.image && matrix.presets.image || fromJSON('null') }}
     steps:
       - uses: actions/checkout@v6
         with:
