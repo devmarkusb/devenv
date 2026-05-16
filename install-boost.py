@@ -20,7 +20,11 @@ def command_exists(name: str) -> bool:
 
 
 def run(
-    command: list[str], *, check: bool = True, capture_output: bool = False
+    command: list[str],
+    *,
+    check: bool = True,
+    capture_output: bool = False,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     stdout = subprocess.PIPE if capture_output else sys.stderr
     stderr = subprocess.PIPE if capture_output else sys.stderr
@@ -30,6 +34,7 @@ def run(
         stdout=stdout,
         stderr=stderr,
         text=True,
+        env=env,
     )
 
 
@@ -122,11 +127,17 @@ def detect_cmake_prefix_paths() -> list[Path]:
 
 
 def vcpkg_executable() -> Path | None:
-    candidates = [
-        Path("/opt/vcpkg/vcpkg"),
-        Path(os.environ.get("VCPKG_INSTALLATION_ROOT", "")) / "vcpkg.exe",
-        Path(os.environ.get("VCPKG_INSTALLATION_ROOT", "")) / "vcpkg",
-    ]
+    candidates = [Path("/opt/vcpkg/vcpkg")]
+    # GitHub macOS images set VCPKG_INSTALLATION_ROOT but Boost CI uses Homebrew there.
+    if sys.platform != "darwin":
+        vcpkg_root = os.environ.get("VCPKG_INSTALLATION_ROOT", "")
+        if vcpkg_root:
+            candidates.extend(
+                [
+                    Path(vcpkg_root) / "vcpkg.exe",
+                    Path(vcpkg_root) / "vcpkg",
+                ]
+            )
     for candidate in candidates:
         if not candidate.is_file():
             continue
@@ -194,10 +205,10 @@ def install_with_apt() -> Path:
 
 
 def install_boost(components: list[str], triplet: str | None) -> Path:
-    if vcpkg_executable() is not None:
-        return install_with_vcpkg(components, triplet)
     if sys.platform == "darwin":
         return install_with_brew()
+    if vcpkg_executable() is not None:
+        return install_with_vcpkg(components, triplet)
     if sys.platform.startswith("linux") and command_exists("apt-get"):
         return install_with_apt()
     raise SystemExit(
