@@ -1,0 +1,13 @@
+---
+description: Core devenv constraints — canonical instructions live in AGENTS.md
+alwaysApply: true
+---
+
+Read and follow [AGENTS.md](../../AGENTS.md) for build, lint, architecture, and safety rules.
+
+Quick constraints:
+
+- Infrastructure submodule for **consumer** C++ repos; no product C++ sources or ctest in this tree.
+- Do not edit `fetchcontent-lockfile.json`, `build/`, `.venv/`, or git hooks without explicit user approval.
+- Default verify: `pre-commit run --all-files`; after CMake changes also `cmake --workflow --preset ci` (or `dev`).
+- Reusable workflows under `.github/workflows/` are a public API — preserve inputs and `devenv/` path assumptions.

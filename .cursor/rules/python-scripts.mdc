@@ -1,0 +1,12 @@
+---
+description: Python helper scripts (clang-tidy, install-*, cppcheck)
+globs:
+  - "*.py"
+  - "*.sh"
+---
+
+Follow [AGENTS.md](../../AGENTS.md).
+
+- Target Python 3.10+ (`pyupgrade` in pre-commit).
+- Lint/format: `pre-commit run --all-files` (ruff, ruff-format).
+- Scripts are invoked from **consumer** project roots as `devenv/<script>`; preserve CLI flags documented in README.md.
