@@ -62,9 +62,13 @@ jobs:
           exit 1
         fi
         bash "${SETUP_SCRIPT}"
-    - name: Consumer setup (commands)
-      if: inputs.setup
-      shell: ${{ inputs.setup_shell }}
+    - name: Consumer setup (commands, bash)
+      if: inputs.setup && inputs.setup_shell != 'pwsh'
+      shell: bash
+      run: ${{ inputs.setup }}
+    - name: Consumer setup (commands, pwsh)
+      if: inputs.setup && inputs.setup_shell == 'pwsh'
+      shell: pwsh
       run: ${{ inputs.setup }}
     - name: Configure CMake (Library)
       env:
