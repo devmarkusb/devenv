@@ -3,6 +3,7 @@
 #
 # Used by markdownlint-cli (see .pre-commit-config.yaml). Keeps technical READMEs
 # with long URLs, tables, and unannotated fences from failing the hook.
+# AI agent markdown (AGENTS.md, CLAUDE.md, …) is listed in .markdownlintignore.
 default: true
 MD022: false
 MD040: false

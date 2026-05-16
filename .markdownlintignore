@@ -1,0 +1,4 @@
+# AI agent instruction files (operational; linted via AGENTS.md conventions, not README style)
+AGENTS.md
+CLAUDE.md
+GEMINI.md

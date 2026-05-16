@@ -1,0 +1,19 @@
+---
+description: CMake modules and GitHub reusable workflows
+globs:
+  - cmake/**
+  - CMakeLists.txt
+  - CMakePresets.json
+  - fetchcontent-lockfile.json
+  - .github/workflows/**
+  - .github/zizmor.yml
+---
+
+Follow [AGENTS.md](../../AGENTS.md).
+
+When editing these paths:
+
+- CMake: gersemi via pre-commit; public options/functions use `MB_DEVENV_` prefix where applicable.
+- Bump `fetchcontent-lockfile.json` only when intentionally updating FetchContent pins; re-run `cmake --workflow --preset dev`.
+- Workflows: run `actionlint -color` before done; match existing action pinning and `permissions:` blocks.
+- `pull_request_target` in pre-commit workflows is intentional — do not weaken to `pull_request` without a documented security review.
