@@ -392,11 +392,12 @@ Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` f
 
 **Trigger:** `workflow_call`
 
-| Input                  | Required | Description                                        |
-|------------------------|----------|----------------------------------------------------|
-| `clang_image`          | yes      | Docker image providing clang-tidy.                 |
-| `preset`               | no       | CMake configure preset (default: `clang-release`). |
-| `report_artifact_name` | no       | Artifact name for the full-scan report.            |
+| Input                    | Required | Description                                        |
+|--------------------------|----------|----------------------------------------------------|
+| `clang_image`            | yes      | Docker image providing clang-tidy.                 |
+| `preset`                 | no       | CMake configure preset (default: `clang-release`). |
+| `report_artifact_name`   | no       | Artifact name for the full-scan report.            |
+| `default_setup_script`   | no       | Repo-relative bash script before configure (e.g. Boost). |
 
 Two jobs, gated by event:
 
@@ -429,7 +430,11 @@ jobs:
     uses: devmarkusb/devenv/.github/workflows/clang-tidy-review.yml@main
     with:
       clang_image: ghcr.io/bemanproject/infra-containers-clang:latest
+      default_setup_script: devenv/install-boost.sh
 ```
+
+Projects that require Boost (or other deps) for `cmake --preset` must pass `default_setup_script`, same as
+`cppcheck.yml` / `preset-test.yml`.
 
 The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
 workflow — no separate file needed in the consumer repo.
@@ -438,12 +443,13 @@ workflow — no separate file needed in the consumer repo.
 
 **Trigger:** `workflow_call`
 
-| Input    | Required | Description                                              |
-|----------|----------|----------------------------------------------------------|
-| `preset` | no       | CMake configure preset (default: `clang-release`).       |
+| Input                    | Required | Description                                              |
+|--------------------------|----------|----------------------------------------------------------|
+| `preset`                 | no       | CMake configure preset (default: `clang-release`).       |
+| `default_setup_script`   | no       | Repo-relative bash script before configure (e.g. Boost). |
 
 Runs a full-project cppcheck scan on `ubuntu-latest` by calling `devenv/run-cppcheck.sh`. Consumer repos
-need only an `on:` section and a single `uses:` job — no cppcheck installation step, no inline shell:
+need only an `on:` section and a `uses:` job with optional setup — no cppcheck installation step, no inline shell:
 
 ```yaml
 name: cppcheck
@@ -467,7 +473,12 @@ concurrency:
 jobs:
   cppcheck:
     uses: devmarkusb/devenv/.github/workflows/cppcheck.yml@main
+    with:
+      default_setup_script: devenv/install-boost.sh
 ```
+
+Projects that require Boost (or other deps) for `cmake --preset` must pass `default_setup_script`, same as
+`preset-test.yml` / `build-and-test.yml`.
 
 Place a `CppCheckSuppressions.txt` in the project root to suppress specific findings; the script picks it
 up automatically.

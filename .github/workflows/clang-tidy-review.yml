@@ -15,6 +15,13 @@ on:
         description: 'Artifact name for the uploaded full-scan report'
         type: string
         default: 'clang-tidy-full-project-report'
+      default_setup_script:
+        description: >-
+          Optional repo-relative bash script run after checkout before configure
+          (e.g. devenv/install-boost.sh when find_package(Boost) is required).
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -35,6 +42,19 @@ jobs:
 
       - name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Consumer setup (script)
+        if: inputs.default_setup_script != ''
+        shell: bash
+        env:
+          SETUP_SCRIPT: ${{ inputs.default_setup_script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+            exit 1
+          fi
+          bash "${SETUP_SCRIPT}"
 
       - name: Add clang-tidy problem matcher
         run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
@@ -76,6 +96,19 @@ jobs:
 
       - name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Consumer setup (script)
+        if: inputs.default_setup_script != ''
+        shell: bash
+        env:
+          SETUP_SCRIPT: ${{ inputs.default_setup_script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+            exit 1
+          fi
+          bash "${SETUP_SCRIPT}"
 
       - name: Add clang-tidy problem matcher
         run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
