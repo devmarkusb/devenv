@@ -22,6 +22,12 @@ on:
         type: string
         required: false
         default: ''
+      extra_cmake_args:
+        description: >-
+          Extra cmake --preset argument(s).
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -66,6 +72,7 @@ jobs:
           BASE_SHA_PUSH: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
           PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
         run: |
           set -euo pipefail
 
@@ -74,10 +81,15 @@ jobs:
           else
             base_sha="${BASE_SHA_PUSH}"
           fi
+          cmake_extra_args=()
+          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
+            cmake_extra_args+=(--cmake-extra "${EXTRA_CMAKE_ARGS}")
+          fi
           python3 ./devenv/clang-tidy-review.py changed \
             --base "${base_sha}" \
             --head "${HEAD_SHA}" \
-            --preset "${PRESET}"
+            --preset "${PRESET}" \
+            "${cmake_extra_args[@]}"
 
   full-project:
     name: full project
@@ -117,15 +129,21 @@ jobs:
         shell: bash
         env:
           PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
         run: |
           set -euo pipefail
 
           report_dir="${RUNNER_TEMP}/clang-tidy"
           report_file="${report_dir}/full-project.txt"
           mkdir -p "${report_dir}"
+          cmake_extra_args=()
+          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
+            cmake_extra_args+=(--cmake-extra "${EXTRA_CMAKE_ARGS}")
+          fi
           python3 ./devenv/clang-tidy-review.py full \
             --report-file "${report_file}" \
-            --preset "${PRESET}"
+            --preset "${PRESET}" \
+            "${cmake_extra_args[@]}"
 
       - name: Upload full scan report
         if: always()

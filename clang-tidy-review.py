@@ -73,6 +73,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Install or upgrade the latest available LLVM/clang-tidy from a package manager.",
     )
+    parser.add_argument(
+        "--cmake-extra",
+        action="append",
+        default=[],
+        metavar="ARG",
+        help=(
+            "Extra argument for cmake --preset (repeatable)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -274,8 +283,9 @@ def select_clang_tidy(install: bool) -> Path:
     return path
 
 
-def configure(preset: str) -> None:
-    run(["cmake", "--preset", preset])
+def configure(preset: str, cmake_extra: list[str]) -> None:
+    command = ["cmake", "--preset", preset, *cmake_extra]
+    run(command)
 
 
 def discover_extra_args_before() -> list[str]:
@@ -602,7 +612,7 @@ def main() -> int:
     os.chdir(repo_root())
 
     clang_tidy = select_clang_tidy(args.install)
-    configure(args.preset)
+    configure(args.preset, args.cmake_extra)
     build_dir = repo_root() / "build" / args.preset
 
     if args.mode == "full":
