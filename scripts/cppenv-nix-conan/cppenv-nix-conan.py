@@ -106,7 +106,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libstdc++11",
             },
-            "user_toolchain": "devenv/cmake/toolchains/gcc-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/gcc-toolchain.cmake",
         },
         "linux-gcc-release": {
             "include": "default",
@@ -117,7 +117,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libstdc++11",
             },
-            "user_toolchain": "devenv/cmake/toolchains/gcc-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/gcc-toolchain.cmake",
         },
         "linux-clang-debug": {
             "include": "default",
@@ -128,7 +128,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libstdc++11",
             },
-            "user_toolchain": "devenv/cmake/toolchains/clang-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/clang-toolchain.cmake",
         },
         "linux-clang-release": {
             "include": "default",
@@ -139,7 +139,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libstdc++11",
             },
-            "user_toolchain": "devenv/cmake/toolchains/clang-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/clang-toolchain.cmake",
         },
         "linux-clang-libcxx-debug": {
             "include": "default",
@@ -150,7 +150,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libc++",
             },
-            "user_toolchain": "devenv/cmake/toolchains/clang-libc++-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/clang-libc++-toolchain.cmake",
         },
         "linux-clang-libcxx-release": {
             "include": "default",
@@ -161,7 +161,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "26",
                 "compiler.libcxx": "libc++",
             },
-            "user_toolchain": "devenv/cmake/toolchains/clang-libc++-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/clang-libc++-toolchain.cmake",
         },
         "macos-appleclang-debug": {
             "include": "default",
@@ -170,7 +170,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "23",
                 "compiler.libcxx": "libc++",
             },
-            "user_toolchain": "devenv/cmake/toolchains/appleclang-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/appleclang-toolchain.cmake",
         },
         "macos-appleclang-release": {
             "include": "default",
@@ -179,7 +179,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "compiler.cppstd": "23",
                 "compiler.libcxx": "libc++",
             },
-            "user_toolchain": "devenv/cmake/toolchains/appleclang-toolchain.cmake",
+            "user_toolchain": "{{profile_dir}}/../../devenv/cmake/toolchains/appleclang-toolchain.cmake",
         },
     },
 }
@@ -529,6 +529,24 @@ def render_conan_profile(profile_data: dict[str, Any]) -> str:
         die("conan profile settings must be a non-empty object.")
     if not toolchain:
         die("conan profile is missing user_toolchain.")
+    if not isinstance(toolchain, str):
+        die("conan profile user_toolchain must be a string.")
+
+    normalized_toolchain = toolchain.strip()
+    if not normalized_toolchain:
+        die("conan profile user_toolchain must not be empty.")
+    if "{{profile_dir}}" not in normalized_toolchain:
+        # Keep absolute paths as-is; make relative ones stable from profile location.
+        is_posix_abs = normalized_toolchain.startswith("/")
+        is_windows_abs = (
+            len(normalized_toolchain) >= 3
+            and normalized_toolchain[1] == ":"
+            and normalized_toolchain[2] in {"\\", "/"}
+        )
+        if not (is_posix_abs or is_windows_abs):
+            normalized_toolchain = (
+                "{{profile_dir}}/../../" + normalized_toolchain.lstrip("./")
+            )
 
     lines = [
         f"include({include_profile})",
@@ -541,7 +559,7 @@ def render_conan_profile(profile_data: dict[str, Any]) -> str:
         "",
         "[conf]",
         "tools.cmake.cmaketoolchain:generator=Ninja",
-        f'tools.cmake.cmaketoolchain:user_toolchain=["{toolchain}"]',
+        f'tools.cmake.cmaketoolchain:user_toolchain=["{normalized_toolchain}"]',
         "",
     ]
     return "\n".join(lines)
