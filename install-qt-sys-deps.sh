@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Install system libraries required by Qt6GuiConfig.cmake (xcb, xkbcommon) in CI.
 # Tries emerge (Gentoo with synced Portage), then vcpkg (/opt/vcpkg), then apt-get.
-# If none succeed, creates cmake stubs for the missing Qt wrapper packages so that
-# cmake can configure and produce compile_commands.json for clang-tidy analysis.
+# If none succeed, injects cmake stubs directly into Qt's lib/cmake tree so that
+# Qt's internal find_dependency(WrapXxx NO_DEFAULT_PATH) mechanism finds them.
 set -euo pipefail
 
 append_cmake_prefix_path() {
@@ -16,12 +16,11 @@ append_cmake_prefix_path() {
     echo "Added ${path} to CMAKE_PREFIX_PATH"
 }
 
-# Qt's Wrap* cmake config files (WrapOpenGL, WrapEGL, WrapXkbCommon, WrapXCB, …)
-# live in lib/cmake/Qt6/, not in the standard lib/cmake/WrapXxx/ directories.
-# They are normally found via _qt_additional_packages_prefix_paths set inside
-# Qt6Config.cmake. When that variable is empty (observed in Beman CI), cmake
-# cannot find them. Adding the Qt6 cmake subdirectory to CMAKE_PREFIX_PATH fixes
-# discovery unconditionally.
+# Qt's Wrap* cmake config files live inside lib/cmake/WrapXxx/ subdirectories.
+# Qt6Config.cmake sets _qt_additional_packages_prefix_paths = lib/cmake and then
+# searches for each dependency with NO_DEFAULT_PATH (ignoring CMAKE_PREFIX_PATH
+# and $ENV{CMAKE_PREFIX_PATH} entirely). Adding Qt6's cmake dir to the env prefix
+# path is still useful for direct find_package callers that use the normal search.
 if [[ -n "${QT_ROOT_DIR:-}" && -d "${QT_ROOT_DIR}/lib/cmake/Qt6" ]]; then
     append_cmake_prefix_path "${QT_ROOT_DIR}/lib/cmake/Qt6"
     echo "Added Qt6 cmake dir to CMAKE_PREFIX_PATH for Wrap* module discovery"
@@ -87,38 +86,45 @@ fi
 
 echo "::warning::Could not install Qt6Gui system dependencies (no emerge, vcpkg, or apt-get found)."
 
-# --- cmake stubs (last resort for Beman Gentoo CI without installable system libs) ---
-# The stubs provide empty INTERFACE IMPORTED targets so cmake can configure
-# successfully and produce compile_commands.json for clang-tidy. They are NOT
-# suitable for compilation or linking — only for static analysis.
-# Prepend the stubs directory BEFORE the Qt cmake dir so cmake finds our stubs
-# first (Qt's real Wrap* configs would fail-fast when the system lib is absent).
-if [[ -n "${QT_ROOT_DIR:-}" ]]; then
-    STUBS_DIR="/tmp/qt-sys-stubs"
-    mkdir -p "${STUBS_DIR}/lib/cmake"
+# --- cmake stubs injected into Qt's cmake tree (last resort for Beman Gentoo CI) ---
+#
+# Qt's internal find_dependency for Wrap* packages uses NO_DEFAULT_PATH with
+# PATHS = _qt_additional_packages_prefix_paths (= ${QT_ROOT_DIR}/lib/cmake).
+# Regular CMAKE_PREFIX_PATH entries are ignored by this mechanism.
+#
+# By writing stub WrapXxxConfig.cmake files directly into Qt's lib/cmake/WrapXxx/
+# subdirectories, we place them exactly where Qt's cmake search will look —
+# without modifying any cmake command-line arguments.
+#
+# The stubs declare FOUND=TRUE and create empty INTERFACE IMPORTED targets.
+# This is sufficient for cmake to configure successfully and emit
+# compile_commands.json for clang-tidy. It is NOT suitable for real linking.
+if [[ -n "${QT_ROOT_DIR:-}" && -d "${QT_ROOT_DIR}/lib/cmake" ]]; then
+    QT_LIB_CMAKE="${QT_ROOT_DIR}/lib/cmake"
 
     make_wrap_stub() {
         local pkg="$1"
-        local dir="${STUBS_DIR}/lib/cmake/${pkg}"
+        local dir="${QT_LIB_CMAKE}/${pkg}"
         mkdir -p "${dir}"
         cat > "${dir}/${pkg}Config.cmake" << EOF
-# CI stub: ${pkg} — empty INTERFACE target for clang-tidy analysis only.
+# CI stub: ${pkg} -- empty INTERFACE target for clang-tidy analysis only.
 if(NOT TARGET ${pkg}::${pkg})
     add_library(${pkg}::${pkg} INTERFACE IMPORTED)
 endif()
 set(${pkg}_FOUND TRUE)
 EOF
+        echo "  Wrote stub: ${dir}/${pkg}Config.cmake"
     }
 
-    # Known Qt6Gui PUBLIC find_dependency targets that require unavailable system libs.
-    # Extend this list if a subsequent CI run shows more failing Wrap* packages.
+    echo "Writing cmake stubs into ${QT_LIB_CMAKE} for clang-tidy CI analysis:"
+    # Cover all Wrap* packages that Qt6GuiDependencies.cmake may require.
+    # The stubs replace Qt's own configs (which would fail on missing system libs).
     make_wrap_stub WrapOpenGL
     make_wrap_stub WrapEGL
+    make_wrap_stub WrapVulkanHeaders
     make_wrap_stub WrapXCB
     make_wrap_stub WrapXkbCommon
-    make_wrap_stub WrapVulkanHeaders
-
-    # Prepend stubs dir so it takes precedence over Qt's own Wrap* cmake configs.
-    append_cmake_prefix_path "${STUBS_DIR}"
-    echo "Created cmake stubs in ${STUBS_DIR} for clang-tidy CI analysis."
+    make_wrap_stub WrapFreetype
+    make_wrap_stub WrapHarfbuzz
+    make_wrap_stub WrapZLIB
 fi
