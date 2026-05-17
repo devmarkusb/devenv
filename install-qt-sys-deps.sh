@@ -8,9 +8,21 @@ append_cmake_prefix_path() {
     if [[ -z "${GITHUB_ENV:-}" ]]; then return; fi
     local existing="${CMAKE_PREFIX_PATH:-}"
     local merged="${path}${existing:+:${existing}}"
+    # Export so subsequent calls in this script see the accumulated value.
+    export CMAKE_PREFIX_PATH="${merged}"
     echo "CMAKE_PREFIX_PATH=${merged}" >> "${GITHUB_ENV}"
     echo "Added ${path} to CMAKE_PREFIX_PATH"
 }
+
+# Qt's Wrap* cmake config files (WrapXkbCommon, WrapXCB, etc.) live in
+# lib/cmake/Qt6/, not in lib/cmake/WrapXxx/. They are normally found via
+# _qt_additional_packages_prefix_paths set inside Qt6Config.cmake. When that
+# variable is empty (observed in Beman CI), cmake cannot find them. Adding the
+# Qt6 cmake subdirectory to CMAKE_PREFIX_PATH fixes discovery unconditionally.
+if [[ -n "${QT_ROOT_DIR:-}" && -d "${QT_ROOT_DIR}/lib/cmake/Qt6" ]]; then
+    append_cmake_prefix_path "${QT_ROOT_DIR}/lib/cmake/Qt6"
+    echo "Added Qt6 cmake dir to CMAKE_PREFIX_PATH for Wrap* module discovery"
+fi
 
 # Diagnostic: show what find_dependency calls Qt6GuiDependencies.cmake actually makes.
 # This helps diagnose which package is missing without having to run cmake first.
