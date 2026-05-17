@@ -14,7 +14,7 @@ append_cmake_prefix_path() {
 
 # Diagnostic: show what find_dependency calls Qt6GuiDependencies.cmake actually makes.
 # This helps diagnose which package is missing without having to run cmake first.
-QT_GUI_DEPS="${QT_ROOT_DIR:-}/../../../lib/cmake/Qt6Gui/Qt6GuiDependencies.cmake"
+QT_GUI_DEPS="${QT_ROOT_DIR:-}/lib/cmake/Qt6Gui/Qt6GuiDependencies.cmake"
 if [[ -f "${QT_GUI_DEPS}" ]]; then
     echo "=== Qt6GuiDependencies.cmake find_dependency calls ==="
     grep -E 'find_dependency|find_package' "${QT_GUI_DEPS}" || echo "(none found)"
