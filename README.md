@@ -280,7 +280,9 @@ The script:
 
 ### .github/actions
 
-Composite actions used by reusable workflows (and callable from consumer workflows):
+Composite actions used by reusable workflows (and callable from consumer workflows). Reusable workflows
+reference them as `devmarkusb/devenv/.github/actions/<name>@<ref>` so they resolve when called from
+consumer repos (relative `./.github/actions/...` paths only work inside the devenv repo itself).
 
 | Action               | Purpose                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------- |

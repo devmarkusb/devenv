@@ -40,7 +40,7 @@ jobs:
 
       - name: Setup dependencies
         if: inputs.setup_boost || inputs.default_setup_script != ''
-        uses: ./.github/actions/setup-dependencies
+        uses: devmarkusb/devenv/.github/actions/setup-dependencies@main
         with:
           setup_boost: ${{ inputs.setup_boost }}
           boost_components: ${{ inputs.boost_components }}
