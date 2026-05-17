@@ -145,7 +145,9 @@ def install_with_brew() -> Path:
     run(["brew", "install", "qt"])
     prefix = qt6_cmake_prefix()
     if prefix is None:
-        raise SystemExit("brew install qt completed but Qt6 CMake config was not found.")
+        raise SystemExit(
+            "brew install qt completed but Qt6 CMake config was not found."
+        )
     return prefix
 
 

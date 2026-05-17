@@ -78,9 +78,7 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         metavar="ARG",
-        help=(
-            "Extra argument for cmake --preset (repeatable)."
-        ),
+        help=("Extra argument for cmake --preset (repeatable)."),
     )
     return parser.parse_args()
 
