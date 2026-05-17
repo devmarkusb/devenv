@@ -172,6 +172,19 @@ any translation unit). The diff base defaults to the merge-base with the upstrea
 Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
 `::add-matcher::devenv/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into inline PR annotations.
 
+### install-qt.py / install-qt.sh
+
+Locates or installs **Qt 6** for CMake **`find_package(Qt6)`** (used by **uiwrap** with the `qt` backend).
+**Linux:** `apt` `qt6-base-dev` and `qt6-declarative-dev` when available (Beman CI containers).
+**macOS:** Homebrew `qt`. Exports **`CMAKE_PREFIX_PATH`** to **`GITHUB_ENV`** when `--export-github-env` is set.
+
+```bash
+python3 devenv/install-qt.py --ensure --print-prefix-path
+cmake --preset clang-release -DEXAMPLE_USE_IMPLEMENTATION=qt
+python3 devenv/clang-tidy-review.py full --preset clang-release \
+  --cmake-extra -DEXAMPLE_USE_IMPLEMENTATION=qt
+```
+
 ### install-boost.py / install-boost.sh
 
 Locates or installs **Boost** for CMake **`find_package(Boost CONFIG)`** (used by consumers such as
