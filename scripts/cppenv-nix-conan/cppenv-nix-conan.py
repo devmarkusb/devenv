@@ -84,8 +84,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "ninja",
                 "pkg-config",
                 "conan",
-                "clang_21",
-                "libcxx",
+                "llvmPackages_21.clangWithLibcAndBasicRtAndLibcxx",
             ],
         },
         "appleclang": {
