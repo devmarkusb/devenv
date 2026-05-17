@@ -81,8 +81,12 @@ def boost_cmake_prefix(prefix: Path) -> Path | None:
         return prefix_from_lib_cmake_config(lib_configs[0])
     if (resolved / "share" / "boost" / "BoostConfig.cmake").is_file():
         return resolved
-    if any(resolved.glob("share/**/BoostConfig.cmake")):
-        return resolved
+    share_dir = resolved / "share"
+    if share_dir.is_dir():
+        for pattern in ("boost*", "Boost*"):
+            for candidate in share_dir.glob(pattern):
+                if (candidate / "BoostConfig.cmake").is_file():
+                    return resolved
     return None
 
 
