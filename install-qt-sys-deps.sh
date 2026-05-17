@@ -12,12 +12,13 @@ append_cmake_prefix_path() {
     echo "Added ${path} to CMAKE_PREFIX_PATH"
 }
 
+privilege=()
+if [[ "$(id -u)" != "0" ]] && command -v sudo &>/dev/null; then
+    privilege=(sudo)
+fi
+
 # --- Gentoo (Portage) ---
 if command -v emerge &>/dev/null && [[ -d /var/db/repos/gentoo ]]; then
-    privilege=()
-    if [[ "$(id -u)" != "0" ]] && command -v sudo &>/dev/null; then
-        privilege=(sudo -n)
-    fi
     "${privilege[@]+"${privilege[@]}"}" emerge --noreplace --getbinpkg \
         x11-libs/libxcb \
         x11-libs/libxkbcommon \
@@ -29,28 +30,24 @@ if command -v emerge &>/dev/null && [[ -d /var/db/repos/gentoo ]]; then
     exit 0
 fi
 
-# --- vcpkg (Beman infra-containers when Portage is unavailable) ---
+# --- vcpkg (fallback when Portage is unavailable) ---
 VCPKG="${VCPKG_INSTALLATION_ROOT:-/opt/vcpkg}/vcpkg"
 if [[ -x "${VCPKG}" ]]; then
     TRIPLET="x64-linux"
-    "${VCPKG}" install \
-        "libxcb:${TRIPLET}" \
-        "libxkbcommon:${TRIPLET}"
-    INSTALLED="$(dirname "${VCPKG}")/installed/${TRIPLET}"
-    if [[ -d "${INSTALLED}" ]]; then
-        append_cmake_prefix_path "${INSTALLED}"
+    if "${VCPKG}" install "libxcb:${TRIPLET}" "libxkbcommon:${TRIPLET}" 2>&1; then
+        INSTALLED="$(dirname "${VCPKG}")/installed/${TRIPLET}"
+        [[ -d "${INSTALLED}" ]] && append_cmake_prefix_path "${INSTALLED}"
+        exit 0
     fi
-    exit 0
+    echo "::warning::vcpkg could not install libxcb/libxkbcommon; falling through to apt-get."
 fi
 
-# --- apt-get (Ubuntu hosts) ---
+# --- apt-get (Debian/Ubuntu) ---
 if command -v apt-get &>/dev/null; then
-    privilege=()
-    if [[ "$(id -u)" != "0" ]] && command -v sudo &>/dev/null; then
-        privilege=(sudo)
-    fi
     "${privilege[@]+"${privilege[@]}"}" apt-get update -y
     "${privilege[@]+"${privilege[@]}"}" apt-get install -y \
+        cmake \
+        ninja-build \
         libgl1-mesa-dev \
         libxcb1-dev \
         libxcb-render0-dev \
