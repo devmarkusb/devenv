@@ -305,6 +305,29 @@ def is_translation_unit(path: str) -> bool:
     )
 
 
+def translation_units_from_compile_db(build_dir: Path) -> list[str] | None:
+    """Return repo-relative TUs from compile_commands.json, or None if unavailable."""
+    compile_db = build_dir / "compile_commands.json"
+    if not compile_db.is_file():
+        return None
+
+    root = repo_root()
+    units: list[str] = []
+    for entry in json.loads(compile_db.read_text()):
+        file_path = Path(entry["file"])
+        try:
+            rel = file_path.relative_to(root).as_posix()
+        except ValueError:
+            continue
+        if is_translation_unit(rel):
+            units.append(rel)
+    return sorted(set(units))
+
+
+def list_git_translation_units() -> list[str]:
+    return [path for path in list_git_files() if is_translation_unit(path)]
+
+
 def is_header(path: str) -> bool:
     return (
         path.startswith("include/")
@@ -400,8 +423,31 @@ def resolve_default_base_ref() -> str:
     return ""
 
 
+def filter_translation_units_to_compile_db(
+    units: list[str], build_dir: Path
+) -> list[str]:
+    """Keep only TUs that appear in compile_commands.json for this configure preset."""
+    compile_units = translation_units_from_compile_db(build_dir)
+    if compile_units is None:
+        return units
+
+    compile_set = set(compile_units)
+    selected = [unit for unit in units if unit in compile_set]
+    skipped = [unit for unit in units if unit not in compile_set]
+    if skipped:
+        print(
+            "Skipping translation units not built by the active CMake preset "
+            f"({len(skipped)} file(s); e.g. Qt impl sources when MB_UIWRAP_USE_IMPLEMENTATION=own):"
+        )
+        for unit in skipped[:8]:
+            print(f"  - {unit}")
+        if len(skipped) > 8:
+            print(f"  ... and {len(skipped) - 8} more")
+    return selected
+
+
 def select_changed_translation_units(
-    base_ref: str, head_ref: str
+    base_ref: str, head_ref: str, build_dir: Path
 ) -> tuple[list[str], str]:
     head_sha = git_output("rev-parse", head_ref)
     base_sha = base_ref or resolve_default_base_ref()
@@ -420,9 +466,10 @@ def select_changed_translation_units(
         print("No changed files to analyze.")
         return [], ""
 
-    all_translation_units = [
-        path for path in list_git_files() if is_translation_unit(path)
-    ]
+    compile_units = translation_units_from_compile_db(build_dir)
+    all_translation_units = (
+        compile_units if compile_units is not None else list_git_translation_units()
+    )
     if not all_translation_units:
         print("No translation units found; skipping changed-files clang-tidy run.")
         return [], ""
@@ -434,34 +481,28 @@ def select_changed_translation_units(
 
     if any(should_trigger_full_scan(path) for path in changed_paths):
         print(
-            "Header or build configuration changes detected; running clang-tidy on the full project."
+            "Header or build configuration changes detected; running clang-tidy on "
+            "translation units from compile_commands.json."
         )
         return all_translation_units, line_filter
 
     selected = [path for path in changed_paths if is_translation_unit(path)]
+    selected = filter_translation_units_to_compile_db(selected, build_dir)
     if not selected:
-        print("No changed translation units to analyze.")
+        print("No changed translation units to analyze for the active CMake preset.")
         return [], ""
     return selected, line_filter
 
 
 def select_full_translation_units(build_dir: Path) -> list[str]:
-    compile_db = build_dir / "compile_commands.json"
-    if compile_db.is_file():
-        root = repo_root()
-        units: list[str] = []
-        for entry in json.loads(compile_db.read_text()):
-            file_path = Path(entry["file"])
-            try:
-                rel = file_path.relative_to(root).as_posix()
-            except ValueError:
-                continue
-            if is_translation_unit(rel):
-                units.append(rel)
-        if units:
-            return sorted(set(units))
+    compile_units = translation_units_from_compile_db(build_dir)
+    if compile_units is not None:
+        if compile_units:
+            return compile_units
+        print("No translation units found in compile_commands.json.")
+        return []
 
-    translation_units = [path for path in list_git_files() if is_translation_unit(path)]
+    translation_units = list_git_translation_units()
     if not translation_units:
         print("No translation units found; skipping full clang-tidy run.")
         return []
@@ -569,7 +610,7 @@ def main() -> int:
         line_filter = ""
     else:
         translation_units, line_filter = select_changed_translation_units(
-            args.base_ref, args.head_ref
+            args.base_ref, args.head_ref, build_dir
         )
 
     return run_clang_tidy(
