@@ -1,0 +1,57 @@
+name: Install Qt 6
+description: >-
+  Install a pinned Qt 6 kit via jurplel/install-qt-action (cached) and export
+  CMAKE_PREFIX_PATH for CMake find_package(Qt6).
+inputs:
+  version:
+    description: Qt version (e.g. 6.9.3).
+    required: true
+  modules:
+    description: Optional extra Qt modules (comma-separated, e.g. qt5compat).
+    required: false
+    default: ''
+  install_deps:
+    description: >-
+      When true, install-qt-action installs system packages (apt on Debian/Ubuntu).
+      Set false in minimal or non-Debian containers (e.g. Beman Gentoo images).
+    required: false
+    default: 'false'
+  cache:
+    description: Enable Qt installer artifact cache in install-qt-action.
+    required: false
+    default: 'true'
+  cache_key_prefix:
+    description: Prefix for install-qt-action cache keys.
+    required: false
+    default: devenv-qt
+runs:
+  using: composite
+  steps:
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ inputs.version }}
+        target: desktop
+        modules: ${{ inputs.modules }}
+        cache: ${{ inputs.cache }}
+        cache-key-prefix: ${{ inputs.cache_key_prefix }}-${{ inputs.version }}
+        set-env: true
+        install-deps: ${{ inputs.install_deps }}
+
+    - name: Export CMAKE_PREFIX_PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+        qt_root="${QT_ROOT_DIR:-}"
+        if [[ -z "${qt_root}" ]]; then
+          echo "::error::QT_ROOT_DIR is not set after install-qt-action"
+          exit 1
+        fi
+        existing="${CMAKE_PREFIX_PATH:-}"
+        if [[ -n "${existing}" ]]; then
+          merged="${qt_root}:${existing}"
+        else
+          merged="${qt_root}"
+        fi
+        echo "CMAKE_PREFIX_PATH=${merged}" >> "${GITHUB_ENV}"
+        echo "Using Qt at ${qt_root}"

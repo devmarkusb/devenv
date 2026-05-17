@@ -9,11 +9,21 @@ on:
         default: 'clang-release'
       default_setup_script:
         description: >-
-          Optional repo-relative bash script run after checkout before configure
-          (e.g. devenv/install-boost.sh when find_package(Boost) is required).
+          Optional repo-relative bash script run after checkout before configure.
+          devenv/install-boost.sh uses the cached install-boost composite action.
         type: string
         required: false
         default: ''
+      setup_boost:
+        description: Install Boost via cached install-boost action (recommended).
+        type: boolean
+        required: false
+        default: false
+      boost_components:
+        description: Boost components for vcpkg (comma-separated).
+        type: string
+        required: false
+        default: property-tree
 
 permissions:
   contents: read
@@ -28,18 +38,13 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - name: Consumer setup (script)
-        if: inputs.default_setup_script != ''
-        shell: bash
-        env:
-          SETUP_SCRIPT: ${{ inputs.default_setup_script }}
-        run: |
-          set -euo pipefail
-          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
-            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
-            exit 1
-          fi
-          bash "${SETUP_SCRIPT}"
+      - name: Setup dependencies
+        if: inputs.setup_boost || inputs.default_setup_script != ''
+        uses: ./.github/actions/setup-dependencies
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          default_setup_script: ${{ inputs.default_setup_script }}
 
       - name: Run cppcheck
         shell: bash

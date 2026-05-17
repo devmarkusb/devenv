@@ -1,0 +1,51 @@
+name: Install Boost
+description: >-
+  Locate or install Boost for find_package(Boost CONFIG). Linux uses apt (Debian) or
+  emerge (Gentoo/Beman containers); Windows uses cached vcpkg; macOS uses cached Homebrew.
+inputs:
+  components:
+    description: Comma-separated Boost components for vcpkg (e.g. property-tree).
+    required: false
+    default: property-tree
+  cache:
+    description: Enable dependency-manager caches where supported.
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Cache vcpkg (Windows)
+      if: inputs.cache == 'true' && runner.os == 'Windows'
+      uses: actions/cache@v5
+      with:
+        path: |
+          ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
+          ${{ env.VCPKG_INSTALLATION_ROOT }}\downloads
+          ${{ env.VCPKG_INSTALLATION_ROOT }}\packages
+          ${{ env.VCPKG_INSTALLATION_ROOT }}\buildtrees
+        key: vcpkg-boost-${{ inputs.components }}-${{ hashFiles('devenv/install-boost.py') }}
+        restore-keys: |
+          vcpkg-boost-${{ inputs.components }}-
+
+    - name: Cache Homebrew downloads (macOS)
+      if: inputs.cache == 'true' && runner.os == 'macOS'
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/Library/Caches/Homebrew
+          /opt/homebrew/var/homebrew/cache
+          /usr/local/var/homebrew/cache
+        key: homebrew-boost-${{ inputs.components }}-${{ hashFiles('devenv/install-boost.py') }}
+        restore-keys: |
+          homebrew-boost-${{ inputs.components }}-
+
+    - name: Install Boost
+      shell: bash
+      run: |
+        set -euo pipefail
+        script=devenv/install-boost.sh
+        if [[ ! -f "${script}" ]]; then
+          echo "::error::${script} not found (run from repository root with devenv submodule)"
+          exit 1
+        fi
+        bash "${script}" --components "${{ inputs.components }}"

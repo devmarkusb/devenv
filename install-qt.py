@@ -51,6 +51,12 @@ def unix_privilege_prefix() -> list[str]:
 
 def qt6_config_directories() -> list[Path]:
     candidates: list[Path] = []
+    qt_root = os.environ.get("QT_ROOT_DIR", "").strip()
+    if qt_root:
+        root = Path(qt_root)
+        candidates.append(root)
+        if (root / "lib" / "cmake" / "Qt6").is_dir():
+            candidates.append(root / "lib" / "cmake" / "Qt6")
     for env_name in ("Qt6_DIR", "CMAKE_PREFIX_PATH"):
         raw = os.environ.get(env_name, "")
         if not raw:

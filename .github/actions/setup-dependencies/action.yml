@@ -1,0 +1,69 @@
+name: Setup consumer dependencies
+description: >-
+  Install Boost and/or pinned Qt for consumer CI (cached where possible), or run a
+  custom default_setup_script when it is not the standard devenv install helpers.
+inputs:
+  setup_boost:
+    description: Run cached install-boost (recommended instead of default_setup_script).
+    required: false
+    default: 'false'
+  boost_components:
+    description: Boost vcpkg components (comma-separated).
+    required: false
+    default: property-tree
+  qt_version:
+    description: >-
+      Pin Qt with install-qt-action when non-empty, or when default_setup_script is
+      devenv/install-qt.sh (defaults to 6.9.3).
+    required: false
+    default: ''
+  qt_modules:
+    description: Extra Qt modules for install-qt-action (comma-separated).
+    required: false
+    default: ''
+  qt_install_deps:
+    description: Pass install-deps to install-qt-action (false for Beman Gentoo containers).
+    required: false
+    default: 'false'
+  default_setup_script:
+    description: >-
+      Legacy repo-relative bash script. install-boost.sh / install-qt.sh are handled
+      by the composite actions above; other paths still run via bash.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Install Qt
+      if: >-
+        inputs.qt_version != '' ||
+        inputs.default_setup_script == 'devenv/install-qt.sh'
+      uses: ./.github/actions/install-qt
+      with:
+        version: ${{ inputs.qt_version != '' && inputs.qt_version || '6.9.3' }}
+        modules: ${{ inputs.qt_modules }}
+        install_deps: ${{ inputs.qt_install_deps == 'true' && 'true' || 'false' }}
+
+    - name: Install Boost
+      if: >-
+        inputs.setup_boost == 'true' ||
+        inputs.default_setup_script == 'devenv/install-boost.sh'
+      uses: ./.github/actions/install-boost
+      with:
+        components: ${{ inputs.boost_components }}
+
+    - name: Consumer setup (custom script)
+      if: >-
+        inputs.default_setup_script != '' &&
+        inputs.default_setup_script != 'devenv/install-boost.sh' &&
+        inputs.default_setup_script != 'devenv/install-qt.sh'
+      shell: bash
+      env:
+        SETUP_SCRIPT: ${{ inputs.default_setup_script }}
+      run: |
+        set -euo pipefail
+        if [[ ! -f "${SETUP_SCRIPT}" ]]; then
+          echo "::error::Setup script not found: ${SETUP_SCRIPT}"
+          exit 1
+        fi
+        bash "${SETUP_SCRIPT}"
