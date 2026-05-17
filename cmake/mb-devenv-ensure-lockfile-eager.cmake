@@ -1,6 +1,6 @@
-# Fetch lockfile entries that use cmake_include (no package_name) when the top-level
-# CMAKE_PROJECT_TOP_LEVEL_INCLUDES pass did not run (embedded add_subdirectory(devenv)).
-# Does not register the find_package dependency provider (that still needs TOP_LEVEL_INCLUDES).
+# Fetch lockfile entries that use cmake_include (no package_name) when not already loaded.
+# Include from devenv/CMakeLists.txt *after* project() so tier-A TOP_LEVEL_INCLUDES can run first
+# without double FetchContent_Populate. Does not register the find_package provider.
 
 cmake_minimum_required(VERSION 3.24)
 
