@@ -114,7 +114,7 @@ jobs:
           fi
           cmake_extra_args=()
           if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
-            cmake_extra_args+=(--cmake-extra "${EXTRA_CMAKE_ARGS}")
+            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
           fi
           python3 ./devenv/clang-tidy-review.py changed \
             --base "${base_sha}" \
@@ -170,7 +170,7 @@ jobs:
           mkdir -p "${report_dir}"
           cmake_extra_args=()
           if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
-            cmake_extra_args+=(--cmake-extra "${EXTRA_CMAKE_ARGS}")
+            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
           fi
           python3 ./devenv/clang-tidy-review.py full \
             --report-file "${report_file}" \

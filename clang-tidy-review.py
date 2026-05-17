@@ -32,6 +32,26 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def normalize_cmake_extra_argv(argv: list[str]) -> list[str]:
+    """Fold ``--cmake-extra -D...`` into ``--cmake-extra=-D...`` for argparse."""
+    normalized: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if (
+            token == "--cmake-extra"
+            and index + 1 < len(argv)
+            and argv[index + 1].startswith("-")
+            and not argv[index + 1].startswith("--")
+        ):
+            normalized.append(f"--cmake-extra={argv[index + 1]}")
+            index += 2
+            continue
+        normalized.append(token)
+        index += 1
+    return normalized
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the same clang-tidy selection logic used by CI."
@@ -78,9 +98,12 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         metavar="ARG",
-        help=("Extra argument for cmake --preset (repeatable)."),
+        help=(
+            "Extra argument for cmake --preset (repeatable). "
+            "Use --cmake-extra=-DNAME=value when the value starts with '-'."
+        ),
     )
-    return parser.parse_args()
+    return parser.parse_args(normalize_cmake_extra_argv(sys.argv[1:]))
 
 
 def run(
