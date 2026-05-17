@@ -402,6 +402,202 @@ jobs:
 
 For one-off packages, use per-matrix `setup` / `setup_script` instead of forking the reusable workflow.
 
+### preset-test-nix-conan.yml
+
+**Trigger:** `workflow_call`
+
+Preset-focused alternative to `preset-test.yml` that keeps the same matrix shape (`preset`, `runner`, setup hooks) but
+boots tools via **Nix** and runs **Conan** before invoking `cmake --workflow --preset`.
+
+#### How `ci` preset should look
+
+For this workflow family, your consumer repo should expose a real workflow preset named `ci` in
+`CMakePresets.json` (configure + build steps). Minimal example:
+
+```json
+{
+  "version": 10,
+  "configurePresets": [
+    {
+      "name": "ci",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/conan/conan_toolchain.cmake",
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "${sourceDir}/devenv/cmake/fetch-content-from-lockfile.cmake"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ci",
+      "configurePreset": "ci"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ci",
+      "steps": [
+        { "type": "configure", "name": "ci" },
+        { "type": "build", "name": "ci" }
+      ]
+    }
+  ]
+}
+```
+
+| Input | Required | Description |
+| --- | --- | --- |
+| `matrix_config` | yes | JSON array of preset matrix objects (same base schema as `preset-test.yml`). |
+| `nix_path` | no | `NIX_PATH` for `cachix/install-nix-action` (default `nixpkgs=channel:nixos-unstable`). |
+| `nix_packages` | no | Space-separated nixpkgs package names (default `cmake ninja pkg-config conan`). |
+| `conan_install` | no | Run `conan install` before preset execution (default `true`). |
+| `conanfile` | no | Explicit Conan file path; auto-detects `conanfile.py` / `conanfile.txt` when empty. |
+| `conan_profile` | no | Conan profile for `conan install` (default `default`; profile is auto-detected). |
+| `conan_install_args` | no | Extra args appended to `conan install` (default `--build=missing`). |
+| `conan_output_folder` | no | Output folder for Conan generator files (default `build/conan`). |
+
+Matrix object fields are the same as `preset-test.yml` for:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `preset` | yes | CMake workflow preset name passed to `cmake --workflow --preset`. |
+| `runner` | no | Runner label (default `ubuntu-latest`). |
+| `setup_script` | no | Repo-relative bash script run after checkout. |
+| `setup` | no | Inline setup commands. |
+| `setup_shell` | no | Shell for `setup` (`bash` default). |
+| `nix_packages` | no | Per-row override of workflow input `nix_packages`. |
+| `conanfile` | no | Per-row override of workflow input `conanfile`. |
+| `conan_install` | no | Per-row override of workflow input `conan_install` (`true` / `false`). |
+| `conan_profile` | no | Per-row override of workflow input `conan_profile`. |
+| `conan_install_args` | no | Per-row override of workflow input `conan_install_args`. |
+| `conan_output_folder` | no | Per-row override of workflow input `conan_output_folder`. |
+
+Constraints:
+
+- Linux/macOS runners only (Windows is intentionally rejected).
+- Job `container:` images are not supported in this variant (`image` field is rejected).
+
+Example:
+
+```yaml
+jobs:
+  presets-nix-conan:
+    uses: devmarkusb/devenv/.github/workflows/preset-test-nix-conan.yml@main
+    with:
+      matrix_config: |
+        [
+          {"preset": "ci", "runner": "ubuntu-latest"},
+          {"preset": "ci", "runner": "macos-latest"}
+        ]
+      conan_install: true
+      conan_install_args: "--build=missing"
+```
+
+### Local Nix + Conan via direnv
+
+If you want local behavior close to `preset-test-nix-conan.yml`, use `direnv` with a small `flake.nix` in the consumer
+repo root.
+
+`flake.nix`:
+
+```nix
+{
+  description = "C++ dev shell (nix + conan + cmake presets)";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
+    in
+    {
+      devShells = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [ cmake ninja pkg-config conan ];
+          };
+        });
+    };
+}
+```
+
+`.envrc`:
+
+```bash
+use flake
+```
+
+Then:
+
+```bash
+direnv allow
+conan profile detect --force
+conan install . --build=missing --output-folder build/conan
+cmake --workflow --preset ci
+```
+
+If your project uses Conan-generated toolchain/presets, keep using the corresponding `conan install` flags/profile that
+your project expects; this workflow intentionally leaves those values configurable.
+
+#### Compiler + Conan example (Boost + Qt)
+
+The following example pins a GCC-based Linux profile and resolves Boost + Qt with Conan.
+
+`conanfile.txt`:
+
+```ini
+[requires]
+boost/1.91.0
+qt/6.11.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+```
+
+`conan/profiles/linux-gcc13`:
+
+```ini
+[settings]
+os=Linux
+arch=x86_64
+compiler=gcc
+compiler.version=13
+compiler.libcxx=libstdc++11
+build_type=Release
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
+```
+
+Consumer workflow call:
+
+```yaml
+jobs:
+  presets-nix-conan:
+    uses: devmarkusb/devenv/.github/workflows/preset-test-nix-conan.yml@main
+    with:
+      matrix_config: |
+        [
+          {
+            "preset": "ci",
+            "runner": "ubuntu-latest",
+            "nix_packages": "cmake ninja pkg-config conan gcc13",
+            "conan_profile": "conan/profiles/linux-gcc13",
+            "conan_output_folder": "build/conan",
+            "conan_install_args": "--build=missing"
+          }
+        ]
+```
+
+As of **May 17, 2026**, ConanCenter lists `boost/1.91.0` and `qt/6.11.0`.
+
 ### install-test.yml
 
 **Trigger:** `workflow_call`
