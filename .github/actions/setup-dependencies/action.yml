@@ -38,7 +38,7 @@ runs:
       if: >-
         inputs.qt_version != '' ||
         inputs.default_setup_script == 'devenv/install-qt.sh'
-      uses: ./.github/actions/install-qt
+      uses: devmarkusb/devenv/.github/actions/install-qt@main
       with:
         version: ${{ inputs.qt_version != '' && inputs.qt_version || '6.9.3' }}
         modules: ${{ inputs.qt_modules }}
@@ -48,7 +48,7 @@ runs:
       if: >-
         inputs.setup_boost == 'true' ||
         inputs.default_setup_script == 'devenv/install-boost.sh'
-      uses: ./.github/actions/install-boost
+      uses: devmarkusb/devenv/.github/actions/install-boost@main
       with:
         components: ${{ inputs.boost_components }}
 
