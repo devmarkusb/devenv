@@ -201,8 +201,13 @@ Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can 
 ### install-qt.py / install-qt.sh
 
 Locates or installs **Qt 6** for CMake **`find_package(Qt6)`** (used by **uiwrap** with the `qt` backend).
-**Linux:** `apt` `qt6-base-dev` and `qt6-declarative-dev` when available (Beman CI containers).
-**macOS:** Homebrew `qt`. Exports **`CMAKE_PREFIX_PATH`** to **`GITHUB_ENV`** when `--export-github-env` is set.
+Recognizes **`QT_ROOT_DIR`** (set by [`jurplel/install-qt-action`](https://github.com/jurplel/install-qt-action)
+in CI). **Local fallback:** `apt` on Debian/Ubuntu, Homebrew on macOS. Exports **`CMAKE_PREFIX_PATH`** to
+**`GITHUB_ENV`** when `--export-github-env` is set.
+
+**CI (recommended):** pass `qt_version: '6.9.3'` (and `qt_install_deps: false` in Beman Gentoo containers) to
+reusable workflows — uses `devenv/.github/actions/install-qt` with a cached online installer. Legacy
+`default_setup_script: devenv/install-qt.sh` still maps to the same action (defaults to Qt **6.9.3**).
 
 ```bash
 python3 devenv/install-qt.py --ensure --print-prefix-path
@@ -214,9 +219,10 @@ python3 devenv/clang-tidy-review.py full --preset clang-release \
 ### install-boost.py / install-boost.sh
 
 Locates or installs **Boost** for CMake **`find_package(Boost CONFIG)`** (used by consumers such as
-**uiwrap** with the `own` backend). **Linux:** `apt` `libboost-all-dev` when available (including
-Beman CI containers, even if `/opt/vcpkg` exists). **macOS:** Homebrew. **Windows:** vcpkg via
-`VCPKG_INSTALLATION_ROOT`. Falls back to vcpkg on Linux only when `apt-get` is unavailable.
+**uiwrap** with the `own` backend). **Linux:** `apt` `libboost-all-dev` on Debian/Ubuntu;
+**`emerge dev-libs/boost`** on Gentoo (including **Beman** `infra-containers-*` images — vcpkg is
+**not** used on Linux, avoiding flaky GitHub tarball downloads). **macOS:** Homebrew.
+**Windows:** vcpkg via `VCPKG_INSTALLATION_ROOT` (cached in CI).
 
 **Local usage:**
 
@@ -231,8 +237,10 @@ python3 devenv/install-boost.py --ensure --print-prefix-path
 Optional flags: `--components property-tree` (vcpkg package names `boost-<component>`),
 `--vcpkg-triplet x64-linux`.
 
-**CI usage:** pass `default_setup_script: devenv/install-boost.sh` to
-`preset-test.yml` or `build-and-test.yml` (no forked “with-boost” workflows required).
+**CI usage (recommended):** pass `setup_boost: true` to `preset-test.yml`, `build-and-test.yml`,
+`clang-tidy-review.yml`, or `cppcheck.yml` — runs `devenv/.github/actions/install-boost` (emerge on Beman
+Gentoo containers, apt on Ubuntu; **cached** vcpkg on Windows and Homebrew on macOS). Legacy
+`default_setup_script: devenv/install-boost.sh` is equivalent.
 
 ### install-cppcheck.py
 
@@ -269,6 +277,16 @@ The script:
   `--inline-suppr`, `--inconclusive`, `--library=googletest`, and `--template=gcc`.
 - If `CppCheckSuppressions.txt` exists in the project root, passes it via `--suppressions-list`.
 - Excludes `_deps/` (FetchContent dependencies) from analysis.
+
+### .github/actions
+
+Composite actions used by reusable workflows (and callable from consumer workflows):
+
+| Action               | Purpose                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `install-boost`      | Wraps `install-boost.sh` with optional **actions/cache** (vcpkg on Windows, Homebrew on macOS). |
+| `install-qt`         | Wraps **install-qt-action** (pinned Qt, installer cache) and sets **`CMAKE_PREFIX_PATH`**.      |
+| `setup-dependencies` | Orchestrates Boost/Qt/custom `default_setup_script` for workflow jobs.                          |
 
 ### .github/workflows
 
@@ -313,10 +331,15 @@ referenced inside these workflows resolve correctly.
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                                                  |
-|--------------------------|----------|--------------------------------------------------------------|
-| `matrix_config`          | yes      | Compiler-keyed JSON matrix (see below).                      |
-| `default_setup_script`   | no       | Repo-relative bash script for rows that omit `setup_script`. |
+| Input                  | Required | Description                                                                            |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `matrix_config`        | yes      | Compiler-keyed JSON matrix (see below).                                                |
+| `setup_boost`          | no       | Install Boost via cached composite action (recommended).                               |
+| `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
+| `qt_version`           | no       | Pin Qt via install-qt-action when non-empty.                                           |
+| `qt_modules`           | no       | Extra Qt modules (comma-separated).                                                    |
+| `qt_install_deps`      | no       | `install-deps` for install-qt-action (default `false`).                                |
+| `default_setup_script` | no       | Custom repo-relative script; standard install-*.sh paths use composite actions.        |
 
 Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
 gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version>` Docker images; Apple Clang uses
@@ -337,10 +360,15 @@ Inline `setup` defaults to `pwsh` on `msvc` jobs and `bash` otherwise unless `se
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                                                                                               |
-|--------------------------|----------|-----------------------------------------------------------------------------------------------------------|
-| `matrix_config`          | yes      | JSON **array** of preset matrix objects (see below).                                                      |
-| `default_setup_script`   | no       | Repo-relative bash script for entries that omit `setup_script` (e.g. `.github/ci/preset-setup.sh`).       |
+| Input                  | Required | Description                                                                            |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `matrix_config`        | yes      | JSON **array** of preset matrix objects (see below).                                   |
+| `setup_boost`          | no       | Install Boost via cached composite action (recommended).                               |
+| `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
+| `qt_version`           | no       | Pin Qt via install-qt-action when non-empty.                                           |
+| `qt_modules`           | no       | Extra Qt modules (comma-separated).                                                    |
+| `qt_install_deps`      | no       | `install-deps` for install-qt-action (default `false`).                                |
+| `default_setup_script` | no       | Custom script; standard install-*.sh paths use composite actions.                      |
 
 Each matrix object supports:
 
@@ -356,14 +384,14 @@ Each matrix object supports:
 Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
 CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
 
-Example with Boost (shared devenv helper):
+Example with Boost (cached on Windows/macOS):
 
 ```yaml
 jobs:
   presets:
     uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
     with:
-      default_setup_script: devenv/install-boost.sh
+      setup_boost: true
       matrix_config: |
         [
           {"preset": "ci", "runner": "ubuntu-latest"},
@@ -431,12 +459,17 @@ Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` f
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                                              |
-|--------------------------|----------|----------------------------------------------------------|
-| `clang_image`            | yes      | Docker image providing clang-tidy.                       |
-| `preset`                 | no       | CMake configure preset (default: `clang-release`).       |
-| `report_artifact_name`   | no       | Artifact name for the full-scan report.                  |
-| `default_setup_script`   | no       | Repo-relative bash script before configure (e.g. Boost). |
+| Input                  | Required | Description                                                                            |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `clang_image`          | yes      | Docker image providing clang-tidy.                                                     |
+| `preset`               | no       | CMake configure preset (default: `clang-release`).                                     |
+| `report_artifact_name` | no       | Artifact name for the full-scan report.                                                |
+| `setup_boost`          | no       | Install Boost via cached composite action.                                             |
+| `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
+| `qt_version`           | no       | Pin Qt 6 (e.g. `6.9.3`); cached install-qt-action.                                     |
+| `qt_modules`           | no       | Extra Qt modules (comma-separated).                                                    |
+| `qt_install_deps`      | no       | `install-deps` for install-qt-action (false in Beman containers).                      |
+| `default_setup_script` | no       | Custom script; standard install-*.sh paths use composite actions.                      |
 
 Two jobs, gated by event:
 
@@ -469,11 +502,10 @@ jobs:
     uses: devmarkusb/devenv/.github/workflows/clang-tidy-review.yml@main
     with:
       clang_image: ghcr.io/bemanproject/infra-containers-clang:latest
-      default_setup_script: devenv/install-boost.sh
+      setup_boost: true
 ```
 
-Projects that require Boost (or other deps) for `cmake --preset` must pass `default_setup_script`, same as
-`cppcheck.yml` / `preset-test.yml`.
+For the Qt backend, add `qt_version: '6.9.3'` and `qt_install_deps: false` when using Beman containers.
 
 The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
 workflow — no separate file needed in the consumer repo.
@@ -482,10 +514,12 @@ workflow — no separate file needed in the consumer repo.
 
 **Trigger:** `workflow_call`
 
-| Input                    | Required | Description                                              |
-|--------------------------|----------|----------------------------------------------------------|
-| `preset`                 | no       | CMake configure preset (default: `clang-release`).       |
-| `default_setup_script`   | no       | Repo-relative bash script before configure (e.g. Boost). |
+| Input                  | Required | Description                                                                            |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `preset`               | no       | CMake configure preset (default: `clang-release`).                                     |
+| `setup_boost`          | no       | Install Boost via cached composite action (recommended).                               |
+| `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
+| `default_setup_script` | no       | Custom script; `install-boost.sh` uses the composite action.                           |
 
 Runs a full-project cppcheck scan on `ubuntu-latest` by calling `devenv/run-cppcheck.sh`. Consumer repos
 need only an `on:` section and a `uses:` job with optional setup — no cppcheck installation step, no inline shell:
@@ -513,11 +547,11 @@ jobs:
   cppcheck:
     uses: devmarkusb/devenv/.github/workflows/cppcheck.yml@main
     with:
-      default_setup_script: devenv/install-boost.sh
+      setup_boost: true
 ```
 
-Projects that require Boost (or other deps) for `cmake --preset` must pass `default_setup_script`, same as
-`preset-test.yml` / `build-and-test.yml`.
+Projects that require Boost for `cmake --preset` should pass `setup_boost: true` (or legacy
+`default_setup_script: devenv/install-boost.sh`).
 
 Place a `CppCheckSuppressions.txt` in the project root to suppress specific findings; the script picks it
 up automatically.

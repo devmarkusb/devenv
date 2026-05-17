@@ -82,7 +82,7 @@ Before finishing a change:
 1. **`pre-commit run --all-files`** for any touched tracked files (or sweep target after CMake edits).
 2. **`cmake --workflow --preset ci`** (or at least `dev`) when changing `CMakeLists.txt`, `cmake/**`, `CMakePresets.json`, or `fetchcontent-lockfile.json`.
 3. **`actionlint -color`** when editing `.github/workflows/**` (matches CI `workflow-lint` job).
-4. For **reusable workflow** changes (`build-and-test.yml`, `preset-test.yml`, etc.): verify inputs/outputs documented in `README.md` still match; consumers pin `@tag` or SHA.
+4. For **reusable workflow** changes (`build-and-test.yml`, `preset-test.yml`, `.github/actions/*`, etc.): verify inputs documented in `README.md` still match; consumers pin `@tag` or SHA.
 
 No coverage or ctest requirement in this repo.
 

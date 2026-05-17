@@ -84,6 +84,10 @@ def boost_cmake_prefix(prefix: Path) -> Path | None:
     return None
 
 
+def is_gentoo() -> bool:
+    return Path("/etc/gentoo-release").is_file()
+
+
 def detect_cmake_prefix_paths() -> list[Path]:
     prefixes: list[Path] = []
     seen: set[Path] = set()
@@ -134,6 +138,13 @@ def detect_cmake_prefix_paths() -> list[Path]:
 
     for system_prefix in (Path("/usr/local"), Path("/usr")):
         add(system_prefix)
+
+    for cmake_root in (Path("/usr/lib/cmake"), Path("/usr/lib64/cmake")):
+        if not cmake_root.is_dir():
+            continue
+        for boost_config in cmake_root.glob("Boost-*"):
+            if boost_config.is_dir():
+                add(prefix_from_lib_cmake_config(boost_config))
 
     return prefixes
 
@@ -226,16 +237,54 @@ def install_with_apt() -> Path:
     )
 
 
+def install_with_emerge(privilege_prefix: list[str]) -> Path:
+    if not command_exists("emerge"):
+        raise SystemExit("emerge not found.")
+    # Prefer binpkgs (no source builds, no vcpkg-style GitHub tarball downloads).
+    emerge_cmd = privilege_prefix + [
+        "emerge",
+        "--noreplace",
+        "--getbinpkg",
+        "dev-libs/boost",
+    ]
+    try:
+        run(emerge_cmd)
+    except subprocess.CalledProcessError:
+        eprint("emerge --getbinpkg failed; retrying without --getbinpkg.")
+        run(privilege_prefix + ["emerge", "--noreplace", "dev-libs/boost"])
+    prefixes = detect_cmake_prefix_paths()
+    if prefixes:
+        return prefixes[0]
+    raise SystemExit(
+        "emerge dev-libs/boost completed but Boost CMake config was not found."
+    )
+
+
+def install_on_linux() -> Path:
+    privilege_prefix = unix_privilege_prefix()
+    if command_exists("apt-get"):
+        return install_with_apt()
+    if command_exists("emerge") or is_gentoo():
+        return install_with_emerge(privilege_prefix)
+    raise SystemExit(
+        "Unable to install Boost on Linux: need apt-get (Debian/Ubuntu) or emerge (Gentoo). "
+        "vcpkg is intentionally not used on Linux CI (unreliable GitHub downloads)."
+    )
+
+
 def install_boost(components: list[str], triplet: str | None) -> Path:
     if sys.platform == "darwin":
         return install_with_brew()
-    # Beman/Linux CI images ship /opt/vcpkg but apt is faster and avoids huge vcpkg dep trees.
-    if sys.platform.startswith("linux") and command_exists("apt-get"):
-        return install_with_apt()
-    if vcpkg_executable() is not None:
+    if sys.platform.startswith("linux"):
+        return install_on_linux()
+    if os.name == "nt":
+        if vcpkg_executable() is None:
+            raise SystemExit(
+                "vcpkg not found on Windows (set VCPKG_INSTALLATION_ROOT or install vcpkg)."
+            )
         return install_with_vcpkg(components, triplet)
     raise SystemExit(
-        "Unable to install Boost automatically: need apt-get (Linux), vcpkg, or Homebrew (macOS)."
+        "Unable to install Boost automatically: supported platforms are Linux, macOS, and Windows."
     )
 
 

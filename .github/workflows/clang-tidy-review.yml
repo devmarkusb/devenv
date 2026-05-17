@@ -17,11 +17,41 @@ on:
         default: 'clang-tidy-full-project-report'
       default_setup_script:
         description: >-
-          Optional repo-relative bash script run after checkout before configure
-          (e.g. devenv/install-boost.sh when find_package(Boost) is required).
+          Optional repo-relative bash script run after checkout before configure.
+          devenv/install-boost.sh and devenv/install-qt.sh use cached composite actions;
+          other paths are executed with bash.
         type: string
         required: false
         default: ''
+      setup_boost:
+        description: >-
+          Install Boost via devenv/.github/actions/install-boost (cached on Windows/macOS).
+        type: boolean
+        required: false
+        default: false
+      boost_components:
+        description: Boost components for vcpkg (comma-separated).
+        type: string
+        required: false
+        default: property-tree
+      qt_version:
+        description: >-
+          Pin Qt with install-qt-action (cached). Also used when default_setup_script is
+          devenv/install-qt.sh (defaults to 6.9.3).
+        type: string
+        required: false
+        default: ''
+      qt_modules:
+        description: Extra Qt modules for install-qt-action (comma-separated).
+        type: string
+        required: false
+        default: ''
+      qt_install_deps:
+        description: >-
+          install-deps for install-qt-action (true on ubuntu-latest host; false in Beman containers).
+        type: boolean
+        required: false
+        default: false
       extra_cmake_args:
         description: >-
           Extra cmake --preset argument(s).
@@ -49,18 +79,19 @@ jobs:
       - name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Consumer setup (script)
-        if: inputs.default_setup_script != ''
-        shell: bash
-        env:
-          SETUP_SCRIPT: ${{ inputs.default_setup_script }}
-        run: |
-          set -euo pipefail
-          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
-            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
-            exit 1
-          fi
-          bash "${SETUP_SCRIPT}"
+      - name: Setup dependencies
+        if: >-
+          inputs.setup_boost ||
+          inputs.qt_version != '' ||
+          inputs.default_setup_script != ''
+        uses: ./.github/actions/setup-dependencies
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          qt_version: ${{ inputs.qt_version }}
+          qt_modules: ${{ inputs.qt_modules }}
+          qt_install_deps: ${{ inputs.qt_install_deps }}
+          default_setup_script: ${{ inputs.default_setup_script }}
 
       - name: Add clang-tidy problem matcher
         run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
@@ -109,18 +140,19 @@ jobs:
       - name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Consumer setup (script)
-        if: inputs.default_setup_script != ''
-        shell: bash
-        env:
-          SETUP_SCRIPT: ${{ inputs.default_setup_script }}
-        run: |
-          set -euo pipefail
-          if [[ ! -f "${SETUP_SCRIPT}" ]]; then
-            echo "::error::Setup script not found: ${SETUP_SCRIPT}"
-            exit 1
-          fi
-          bash "${SETUP_SCRIPT}"
+      - name: Setup dependencies
+        if: >-
+          inputs.setup_boost ||
+          inputs.qt_version != '' ||
+          inputs.default_setup_script != ''
+        uses: ./.github/actions/setup-dependencies
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          qt_version: ${{ inputs.qt_version }}
+          qt_modules: ${{ inputs.qt_modules }}
+          qt_install_deps: ${{ inputs.qt_install_deps }}
+          default_setup_script: ${{ inputs.default_setup_script }}
 
       - name: Add clang-tidy problem matcher
         run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"

@@ -15,11 +15,36 @@ on:
         required: true
       default_setup_script:
         description: >-
-          Optional repo-relative setup script when a matrix entry omits setup_script (e.g. .github/ci/preset-setup.sh).
-          Runs after checkout inside the job container (if any), before CMake/MSVC setup.
+          Optional repo-relative setup script when a matrix entry omits setup_script.
+          devenv/install-boost.sh and devenv/install-qt.sh use cached composite actions.
         type: string
         required: false
         default: ''
+      setup_boost:
+        description: Install Boost via cached install-boost action (recommended).
+        type: boolean
+        required: false
+        default: false
+      boost_components:
+        description: Boost components for vcpkg (comma-separated).
+        type: string
+        required: false
+        default: property-tree
+      qt_version:
+        description: Pin Qt with install-qt-action when non-empty.
+        type: string
+        required: false
+        default: ''
+      qt_modules:
+        description: Extra Qt modules (comma-separated).
+        type: string
+        required: false
+        default: ''
+      qt_install_deps:
+        description: install-deps for install-qt-action.
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   preset_test_matrix:
@@ -34,11 +59,24 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
+      - name: Setup dependencies (default)
+        if: >-
+          inputs.setup_boost ||
+          inputs.qt_version != '' ||
+          inputs.default_setup_script != ''
+        uses: ./.github/actions/setup-dependencies
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          qt_version: ${{ inputs.qt_version }}
+          qt_modules: ${{ inputs.qt_modules }}
+          qt_install_deps: ${{ inputs.qt_install_deps }}
+          default_setup_script: ${{ inputs.default_setup_script }}
       - name: Consumer setup (script)
-        if: matrix.presets.setup_script || inputs.default_setup_script
+        if: matrix.presets.setup_script
         shell: bash
         env:
-          SETUP_SCRIPT: ${{ matrix.presets.setup_script || inputs.default_setup_script }}
+          SETUP_SCRIPT: ${{ matrix.presets.setup_script }}
         run: |
           set -euo pipefail
           if [[ ! -f "${SETUP_SCRIPT}" ]]; then
