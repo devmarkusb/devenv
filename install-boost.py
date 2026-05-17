@@ -148,10 +148,11 @@ def detect_cmake_prefix_paths() -> list[Path]:
             if boost_config.is_dir():
                 add(prefix_from_lib_cmake_config(boost_config))
 
-    for config_path in glob.glob("/usr/**/BoostConfig.cmake", recursive=True):
-        config_dir = Path(config_path).parent
-        if config_dir.name.startswith("Boost-"):
-            add(prefix_from_lib_cmake_config(config_dir))
+    if not prefixes:
+        for config_path in glob.glob("/usr/**/BoostConfig.cmake", recursive=True):
+            config_dir = Path(config_path).parent
+            if config_dir.name.startswith("Boost-"):
+                add(prefix_from_lib_cmake_config(config_dir))
 
     return prefixes
 
