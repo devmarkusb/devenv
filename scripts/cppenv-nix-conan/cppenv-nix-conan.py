@@ -53,7 +53,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "install_direnv": True,
         "install_xcode_clt_on_macos": True,
         "configure_direnv_hook": True,
-        "shell_rc_file": "~/.zshrc",
+        "shell_rc_files": ["~/.zshrc", "~/.bashrc"],
     },
     "cmake_presets": {
         "path": "CMakePresets.json",
@@ -317,14 +317,62 @@ def install_linux_packages(packages: list[str], *, assume_yes: bool) -> None:
     die(f"unsupported package manager: {manager}")
 
 
-def ensure_direnv_hook(rc_path: Path) -> None:
-    hook_line = 'eval "$(direnv hook zsh)"'
+def infer_shell_for_rc_file(rc_path: Path) -> str | None:
+    file_name = rc_path.name.lower()
+    if "bash" in file_name:
+        return "bash"
+    if "zsh" in file_name:
+        return "zsh"
+    return None
+
+
+def resolve_direnv_hook_targets(bootstrap: dict[str, Any]) -> list[tuple[Path, str]]:
+    raw_targets = bootstrap.get("shell_rc_files")
+    target_entries: list[str] = []
+
+    if isinstance(raw_targets, str):
+        if raw_targets.strip():
+            target_entries.append(raw_targets.strip())
+    elif isinstance(raw_targets, list):
+        for item in raw_targets:
+            if isinstance(item, str) and item.strip():
+                target_entries.append(item.strip())
+
+    legacy_target = bootstrap.get("shell_rc_file")
+    if isinstance(legacy_target, str) and legacy_target.strip():
+        target_entries.append(legacy_target.strip())
+
+    # Always include both common interactive shells unless already configured.
+    for default_entry in ("~/.zshrc", "~/.bashrc"):
+        if default_entry not in target_entries:
+            target_entries.append(default_entry)
+
+    seen: set[str] = set()
+    targets: list[tuple[Path, str]] = []
+    for entry in target_entries:
+        rc_path = Path(entry).expanduser()
+        key = str(rc_path)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        shell_name = infer_shell_for_rc_file(rc_path)
+        if shell_name is None:
+            print(f"Skipping unsupported rc file for direnv hook: {rc_path}")
+            continue
+        targets.append((rc_path, shell_name))
+    return targets
+
+
+def ensure_direnv_hook(rc_path: Path, shell_name: str) -> None:
+    hook_snippet = f"direnv hook {shell_name}"
+    hook_line = f'eval "$(direnv hook {shell_name})"'
     if rc_path.exists():
         current = rc_path.read_text(encoding="utf-8")
     else:
         current = ""
-    if hook_line in current:
-        print(f"direnv hook already present in {rc_path}")
+    if hook_snippet in current:
+        print(f"direnv hook ({shell_name}) already present in {rc_path}")
         return
     text = current
     if text and not text.endswith("\n"):
@@ -332,7 +380,7 @@ def ensure_direnv_hook(rc_path: Path) -> None:
     text += f"{hook_line}\n"
     rc_path.parent.mkdir(parents=True, exist_ok=True)
     rc_path.write_text(text, encoding="utf-8")
-    print(f"Added direnv hook to {rc_path}")
+    print(f"Added direnv hook ({shell_name}) to {rc_path}")
 
 
 def normalize_inherits(value: Any) -> list[str]:
@@ -704,8 +752,7 @@ def cmd_bootstrap_prereqs(args: argparse.Namespace) -> None:
     install_direnv = bool(bootstrap.get("install_direnv", True))
     install_xcode = bool(bootstrap.get("install_xcode_clt_on_macos", True))
     configure_hook = bool(bootstrap.get("configure_direnv_hook", True))
-    rc_file_raw = str(bootstrap.get("shell_rc_file", "~/.zshrc"))
-    rc_file = Path(rc_file_raw).expanduser()
+    hook_targets = resolve_direnv_hook_targets(bootstrap)
 
     needs_xcode = os_name == "Darwin" and install_xcode and not xcode_clt_installed()
     needs_nix = install_nix and not command_exists("nix")
@@ -722,7 +769,8 @@ def cmd_bootstrap_prereqs(args: argparse.Namespace) -> None:
     if not any((needs_xcode, needs_nix, needs_direnv, needs_curl)):
         print("All configured prerequisites are already installed.")
         if configure_hook and command_exists("direnv"):
-            ensure_direnv_hook(rc_file)
+            for rc_path, shell_name in hook_targets:
+                ensure_direnv_hook(rc_path, shell_name)
         return
 
     if not install_mode:
@@ -769,7 +817,8 @@ def cmd_bootstrap_prereqs(args: argparse.Namespace) -> None:
 
     if configure_hook:
         if command_exists("direnv"):
-            ensure_direnv_hook(rc_file)
+            for rc_path, shell_name in hook_targets:
+                ensure_direnv_hook(rc_path, shell_name)
         else:
             print("Skipping direnv hook setup because `direnv` is still unavailable.")
 

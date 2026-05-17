@@ -69,5 +69,8 @@ python3 devenv/scripts/cppenv-nix-conan/cppenv-nix-conan.py switch-shell gcc15 -
 - Per-platform default shells are controlled via `platform_default_shells`.
 - Adjust package/profile names in `cppenv-nix-conan.json` if your nixpkgs snapshot changes.
 - `bootstrap-prereqs` behavior is controlled in `cppenv-nix-conan.json` under `bootstrap`.
+- `bootstrap-prereqs` ensures direnv hooks exist in both `~/.zshrc` and `~/.bashrc`
+  by default and skips files that already contain the matching hook.
+- Customize hook targets via `bootstrap.shell_rc_files` (list of rc files).
 - CMake presets sync behavior is controlled under `cmake_presets` (`path`, `source_presets`, `auto_sync_on_render`).
 - `conanfile.txt` is generated from `cppenv-nix-conan.json` (`conanfile` section) and will be overwritten on `render/setup`.
