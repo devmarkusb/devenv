@@ -4,9 +4,12 @@ on:
   workflow_call:
     inputs:
       clang_image:
-        description: 'Docker image providing clang-tidy (e.g. ghcr.io/bemanproject/infra-containers-clang:latest)'
+        description: >-
+          Docker image providing clang-tidy (e.g. ghcr.io/bemanproject/infra-containers-clang:latest).
+          Leave empty to run on the native ubuntu-latest runner without a container.
         type: string
-        required: true
+        required: false
+        default: ''
       preset:
         description: 'CMake configure preset passed to clang-tidy-review.py'
         type: string
@@ -63,9 +66,13 @@ permissions:
   contents: read
 
 jobs:
+  # --- jobs using a Docker container (clang_image provided) ---
+
   changed-lines:
     name: changed lines
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >-
+      inputs.clang_image != '' &&
+      (github.event_name == 'pull_request' || github.event_name == 'push')
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-images]
@@ -125,9 +132,10 @@ jobs:
   full-project:
     name: full project
     if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.ref == 'refs/heads/main'
+      inputs.clang_image != '' &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-images]
@@ -139,6 +147,123 @@ jobs:
 
       - name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Setup dependencies
+        if: >-
+          inputs.setup_boost ||
+          inputs.qt_version != '' ||
+          inputs.default_setup_script != ''
+        uses: devmarkusb/devenv/.github/actions/setup-dependencies@main
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          qt_version: ${{ inputs.qt_version }}
+          qt_modules: ${{ inputs.qt_modules }}
+          qt_install_deps: ${{ inputs.qt_install_deps }}
+          default_setup_script: ${{ inputs.default_setup_script }}
+
+      - name: Add clang-tidy problem matcher
+        run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
+
+      - name: Run clang-tidy on the full codebase
+        shell: bash
+        env:
+          PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
+        run: |
+          set -euo pipefail
+
+          report_dir="${RUNNER_TEMP}/clang-tidy"
+          report_file="${report_dir}/full-project.txt"
+          mkdir -p "${report_dir}"
+          cmake_extra_args=()
+          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
+            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
+          fi
+          python3 ./devenv/clang-tidy-review.py full \
+            --report-file "${report_file}" \
+            --preset "${PRESET}" \
+            "${cmake_extra_args[@]}"
+
+      - name: Upload full scan report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.report_artifact_name }}
+          path: ${{ runner.temp }}/clang-tidy/full-project.txt
+          if-no-files-found: ignore
+
+  # --- jobs on the native ubuntu-latest runner (no Docker container) ---
+
+  changed-lines-native:
+    name: changed lines
+    if: >-
+      inputs.clang_image == '' &&
+      (github.event_name == 'pull_request' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+
+      - name: Setup dependencies
+        if: >-
+          inputs.setup_boost ||
+          inputs.qt_version != '' ||
+          inputs.default_setup_script != ''
+        uses: devmarkusb/devenv/.github/actions/setup-dependencies@main
+        with:
+          setup_boost: ${{ inputs.setup_boost }}
+          boost_components: ${{ inputs.boost_components }}
+          qt_version: ${{ inputs.qt_version }}
+          qt_modules: ${{ inputs.qt_modules }}
+          qt_install_deps: ${{ inputs.qt_install_deps }}
+          default_setup_script: ${{ inputs.default_setup_script }}
+
+      - name: Add clang-tidy problem matcher
+        run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
+
+      - name: Run clang-tidy on changed lines
+        shell: bash
+        env:
+          BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA_PUSH: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base_sha="${BASE_SHA_PR}"
+          else
+            base_sha="${BASE_SHA_PUSH}"
+          fi
+          cmake_extra_args=()
+          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
+            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
+          fi
+          python3 ./devenv/clang-tidy-review.py changed \
+            --base "${base_sha}" \
+            --head "${HEAD_SHA}" \
+            --preset "${PRESET}" \
+            "${cmake_extra_args[@]}"
+
+  full-project-native:
+    name: full project
+    if: >-
+      inputs.clang_image == '' &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
 
       - name: Setup dependencies
         if: >-
