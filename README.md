@@ -219,10 +219,9 @@ python3 devenv/clang-tidy-review.py full --preset clang-release \
 ### install-boost.py / install-boost.sh
 
 Locates or installs **Boost** for CMake **`find_package(Boost CONFIG)`** (used by consumers such as
-**uiwrap** with the `own` backend). **Linux:** `apt` `libboost-all-dev` on Debian/Ubuntu;
-**`emerge dev-libs/boost`** on Gentoo (including **Beman** `infra-containers-*` images — vcpkg is
-**not** used on Linux, avoiding flaky GitHub tarball downloads). **macOS:** Homebrew.
-**Windows:** vcpkg via `VCPKG_INSTALLATION_ROOT` (cached in CI).
+**uiwrap** with the `own` backend). **Linux:** `apt` on Debian/Ubuntu; **`emerge dev-libs/boost`**
+when Portage is usable; otherwise **`/opt/vcpkg`** on **Beman** `infra-containers-*` images (cached
+in CI, with install retries). **macOS:** Homebrew. **Windows:** vcpkg (cached in CI).
 
 **Local usage:**
 
@@ -238,8 +237,8 @@ Optional flags: `--components property-tree` (vcpkg package names `boost-<compon
 `--vcpkg-triplet x64-linux`.
 
 **CI usage (recommended):** pass `setup_boost: true` to `preset-test.yml`, `build-and-test.yml`,
-`clang-tidy-review.yml`, or `cppcheck.yml` — runs `devenv/.github/actions/install-boost` (emerge on Beman
-Gentoo containers, apt on Ubuntu; **cached** vcpkg on Windows and Homebrew on macOS). Legacy
+`clang-tidy-review.yml`, or `cppcheck.yml` — runs `devenv/.github/actions/install-boost` (cached
+`/opt/vcpkg` on Beman containers when Portage is unavailable, apt on Ubuntu, Homebrew on macOS). Legacy
 `default_setup_script: devenv/install-boost.sh` is equivalent.
 
 ### install-cppcheck.py

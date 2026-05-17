@@ -1,7 +1,7 @@
 name: Install Boost
 description: >-
-  Locate or install Boost for find_package(Boost CONFIG). Linux uses apt (Debian) or
-  emerge (Gentoo/Beman containers); Windows uses cached vcpkg; macOS uses cached Homebrew.
+  Locate or install Boost for find_package(Boost CONFIG). Linux uses apt, emerge when
+  Portage works, or cached /opt/vcpkg on Beman containers; Windows/macOS use cached vcpkg/Homebrew.
 inputs:
   components:
     description: Comma-separated Boost components for vcpkg (e.g. property-tree).
@@ -26,6 +26,19 @@ runs:
         key: vcpkg-boost-${{ inputs.components }}-${{ hashFiles('devenv/install-boost.py') }}
         restore-keys: |
           vcpkg-boost-${{ inputs.components }}-
+
+    - name: Cache vcpkg (Linux, Beman /opt/vcpkg)
+      if: inputs.cache == 'true' && runner.os == 'Linux'
+      uses: actions/cache@v5
+      with:
+        path: |
+          /opt/vcpkg/installed
+          /opt/vcpkg/downloads
+          /opt/vcpkg/packages
+          /opt/vcpkg/buildtrees
+        key: vcpkg-boost-${{ inputs.components }}-linux-${{ hashFiles('devenv/install-boost.py') }}
+        restore-keys: |
+          vcpkg-boost-${{ inputs.components }}-linux-
 
     - name: Cache Homebrew downloads (macOS)
       if: inputs.cache == 'true' && runner.os == 'macOS'
