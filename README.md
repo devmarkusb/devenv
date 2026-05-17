@@ -658,7 +658,16 @@ Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` f
 
 | Input                  | Required | Description                                                                            |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------- |
-| `clang_image`          | yes      | Docker image providing clang-tidy.                                                     |
+| `use_nix_conan`        | no       | Switch execution mode to Nix+Conan (`false` keeps container mode).                     |
+| `clang_image`          | no       | Docker image providing clang-tidy (used when `use_nix_conan=false`).                   |
+| `nix_runner`           | no       | Runner label for Nix mode (Linux/macOS only).                                          |
+| `nix_path`             | no       | `NIX_PATH` for `cachix/install-nix-action`.                                            |
+| `nix_packages`         | no       | Space-separated nixpkgs packages (cmake/ninja/conan/clang-tidy/etc.).                  |
+| `conan_install`        | no       | Run `conan install` before clang-tidy (Nix mode).                                      |
+| `conanfile`            | no       | Explicit Conan file path; auto-detects `conanfile.py`/`conanfile.txt` when empty.      |
+| `conan_profile`        | no       | Conan profile for install (Nix mode).                                                  |
+| `conan_install_args`   | no       | Extra args appended to `conan install` (Nix mode).                                     |
+| `conan_output_folder`  | no       | Conan output folder (Nix mode).                                                        |
 | `preset`               | no       | CMake configure preset (default: `clang-release`).                                     |
 | `report_artifact_name` | no       | Artifact name for the full-scan report.                                                |
 | `setup_boost`          | no       | Install Boost via cached composite action.                                             |
@@ -668,12 +677,10 @@ Requires `gh` token with `checks:write`, `issues:write`, `pull-requests:write` f
 | `qt_install_deps`      | no       | `install-deps` for install-qt-action (false in Beman containers).                      |
 | `default_setup_script` | no       | Custom script; standard install-*.sh paths use composite actions.                      |
 
-Two jobs, gated by event:
+Two event-gated job families exist in this reusable workflow:
 
-- **`changed-lines`** — on `pull_request` and `push`: runs `clang-tidy-review.py changed`, scoping analysis to
-  modified lines (or widening to the full project when headers / CMake files change).
-- **`full-project`** — on `schedule`, `workflow_dispatch`, and pushes to `main`: runs the full scan and uploads
-  the report as a workflow artifact.
+- **Container mode** (`use_nix_conan=false`, default): `changed-lines-container` and `full-project-container`.
+- **Nix+Conan mode** (`use_nix_conan=true`): `changed-lines-nix` and `full-project-nix`.
 
 Consumer repos only need to define their `on:` trigger section and a single `uses:` job:
 
@@ -703,6 +710,22 @@ jobs:
 ```
 
 For the Qt backend, add `qt_version: '6.9.3'` and `qt_install_deps: false` when using Beman containers.
+
+Nix+Conan mode in the same reusable workflow:
+
+```yaml
+jobs:
+  clang-tidy:
+    uses: devmarkusb/devenv/.github/workflows/clang-tidy-review.yml@main
+    with:
+      use_nix_conan: true
+      nix_runner: ubuntu-latest
+      nix_packages: "cmake ninja pkg-config conan python3 clang clang-tools"
+      conan_install: true
+      conan_profile: default
+      conan_install_args: "--build=missing"
+      conan_output_folder: build/conan
+```
 
 The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
 workflow — no separate file needed in the consumer repo.
