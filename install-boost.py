@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 
 def eprint(*args: object) -> None:
@@ -146,6 +148,11 @@ def detect_cmake_prefix_paths() -> list[Path]:
             if boost_config.is_dir():
                 add(prefix_from_lib_cmake_config(boost_config))
 
+    for config_path in glob.glob("/usr/**/BoostConfig.cmake", recursive=True):
+        config_dir = Path(config_path).parent
+        if config_dir.name.startswith("Boost-"):
+            add(prefix_from_lib_cmake_config(config_dir))
+
     return prefixes
 
 
@@ -185,7 +192,12 @@ def vcpkg_boost_packages(components: list[str]) -> list[str]:
     return packages
 
 
-def install_with_vcpkg(components: list[str], triplet: str | None) -> Path:
+def install_with_vcpkg(
+    components: list[str],
+    triplet: str | None,
+    *,
+    max_attempts: int = 3,
+) -> Path:
     vcpkg = vcpkg_executable()
     if vcpkg is None:
         raise SystemExit("vcpkg executable not found.")
@@ -195,7 +207,25 @@ def install_with_vcpkg(components: list[str], triplet: str | None) -> Path:
     env.setdefault("VCPKG_DEFAULT_TRIPLET", triplet)
 
     packages = vcpkg_boost_packages(components)
-    run([str(vcpkg), "install", *packages, "--triplet", triplet], env=env)
+    install_cmd = [str(vcpkg), "install", *packages, "--triplet", triplet]
+    last_error: subprocess.CalledProcessError | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            run(install_cmd, env=env)
+            last_error = None
+            break
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt >= max_attempts:
+                raise
+            wait_seconds = 20 * attempt
+            eprint(
+                f"vcpkg install failed (attempt {attempt}/{max_attempts}); "
+                f"retrying in {wait_seconds}s..."
+            )
+            time.sleep(wait_seconds)
+    if last_error is not None:
+        raise last_error
 
     vcpkg_root = vcpkg.parent
     prefix = (vcpkg_root / "installed" / triplet).resolve()
@@ -237,10 +267,33 @@ def install_with_apt() -> Path:
     )
 
 
+def portage_can_install(atom: str = "dev-libs/boost") -> bool:
+    """True when emerge can resolve/install (Beman CI images often have broken Portage)."""
+    if not command_exists("emerge"):
+        return False
+    if is_gentoo() and not Path("/var/db/repos/gentoo").is_dir():
+        eprint(
+            "Gentoo Portage tree is not synced (/var/db/repos/gentoo missing); "
+            "skipping emerge."
+        )
+        return False
+    privilege_prefix = unix_privilege_prefix()
+    result = run(
+        privilege_prefix + ["emerge", "--pretend", "--quiet", atom],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        stderr = (result.stderr or "").strip()
+        if stderr:
+            eprint(stderr)
+        eprint("emerge --pretend failed; Portage cannot install packages here.")
+    return result.returncode == 0
+
+
 def install_with_emerge(privilege_prefix: list[str]) -> Path:
     if not command_exists("emerge"):
         raise SystemExit("emerge not found.")
-    # Prefer binpkgs (no source builds, no vcpkg-style GitHub tarball downloads).
     emerge_cmd = privilege_prefix + [
         "emerge",
         "--noreplace",
@@ -260,15 +313,19 @@ def install_with_emerge(privilege_prefix: list[str]) -> Path:
     )
 
 
-def install_on_linux() -> Path:
-    privilege_prefix = unix_privilege_prefix()
+def install_on_linux(components: list[str], triplet: str | None) -> Path:
     if command_exists("apt-get"):
         return install_with_apt()
-    if command_exists("emerge") or is_gentoo():
+    privilege_prefix = unix_privilege_prefix()
+    if portage_can_install():
         return install_with_emerge(privilege_prefix)
+    if vcpkg_executable() is not None:
+        eprint(
+            "Using /opt/vcpkg for Boost (typical for Beman infra-containers when Portage is unavailable)."
+        )
+        return install_with_vcpkg(components, triplet)
     raise SystemExit(
-        "Unable to install Boost on Linux: need apt-get (Debian/Ubuntu) or emerge (Gentoo). "
-        "vcpkg is intentionally not used on Linux CI (unreliable GitHub downloads)."
+        "Unable to install Boost on Linux: need apt-get, working Portage (emerge), or /opt/vcpkg."
     )
 
 
@@ -276,7 +333,7 @@ def install_boost(components: list[str], triplet: str | None) -> Path:
     if sys.platform == "darwin":
         return install_with_brew()
     if sys.platform.startswith("linux"):
-        return install_on_linux()
+        return install_on_linux(components, triplet)
     if os.name == "nt":
         if vcpkg_executable() is None:
             raise SystemExit(
