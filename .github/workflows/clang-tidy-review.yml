@@ -10,6 +10,54 @@ on:
         type: string
         required: false
         default: ''
+      use_nix_conan:
+        description: >-
+          Run clang-tidy inside a Nix shell with optional Conan install instead of using clang_image container mode.
+        type: boolean
+        required: false
+        default: false
+      nix_runner:
+        description: >-
+          Runner label used when use_nix_conan=true (Linux/macOS only; Windows is rejected).
+        type: string
+        required: false
+        default: ubuntu-latest
+      nix_path:
+        description: NIX_PATH passed to install-nix-action (pin nixpkgs source/channel).
+        type: string
+        required: false
+        default: nixpkgs=channel:nixos-unstable
+      nix_packages:
+        description: Space-separated nixpkgs package names used for commands (cmake, ninja, conan, clang-tidy, etc.).
+        type: string
+        required: false
+        default: cmake ninja pkg-config conan python3 clang clang-tools
+      conan_install:
+        description: Run conan install before clang-tidy-review.py.
+        type: boolean
+        required: false
+        default: true
+      conanfile:
+        description: >-
+          Optional explicit Conan file path. If empty, conanfile.py or conanfile.txt at repo root is auto-detected.
+        type: string
+        required: false
+        default: ''
+      conan_profile:
+        description: Conan profile to use for install (default profile is auto-detected/refreshed).
+        type: string
+        required: false
+        default: default
+      conan_install_args:
+        description: Extra CLI args appended to conan install (space-separated).
+        type: string
+        required: false
+        default: --build=missing
+      conan_output_folder:
+        description: Output folder for Conan generator files.
+        type: string
+        required: false
+        default: build/conan
       preset:
         description: 'CMake configure preset passed to clang-tidy-review.py'
         type: string
@@ -66,23 +114,28 @@ permissions:
   contents: read
 
 jobs:
-  changed-lines:
+  changed-lines-container:
     name: changed lines
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >-
+      (github.event_name == 'pull_request' || github.event_name == 'push') &&
+      !inputs.use_nix_conan
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-images]
     steps:
-      - name: Checkout code
+      - &checkout_changed
+        name: Checkout code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: 'recursive'
 
-      - name: Trust workspace for git
+      - &trust_workspace
+        name: Trust workspace for git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Setup dependencies
+      - &setup_dependencies
+        name: Setup dependencies
         if: >-
           inputs.setup_boost ||
           inputs.qt_version != '' ||
@@ -96,7 +149,8 @@ jobs:
           qt_install_deps: ${{ inputs.qt_install_deps }}
           default_setup_script: ${{ inputs.default_setup_script }}
 
-      - name: Add clang-tidy problem matcher
+      - &add_matcher
+        name: Add clang-tidy problem matcher
         run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
 
       - name: Run clang-tidy on changed lines
@@ -115,50 +169,102 @@ jobs:
           else
             base_sha="${BASE_SHA_PUSH}"
           fi
-          cmake_extra_args=()
-          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
-            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
-          fi
-          python3 ./devenv/clang-tidy-review.py changed \
-            --base "${base_sha}" \
-            --head "${HEAD_SHA}" \
-            --preset "${PRESET}" \
-            "${cmake_extra_args[@]}"
+          BASE_SHA="${base_sha}" \
+          HEAD_SHA="${HEAD_SHA}" \
+          PRESET="${PRESET}" \
+          EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
+          USE_NIX_CONAN=false \
+          ./devenv/run-clang-tidy-workflow.sh changed
 
-  full-project:
+  changed-lines-nix:
+    name: changed lines (nix+conan)
+    if: >-
+      (github.event_name == 'pull_request' || github.event_name == 'push') &&
+      inputs.use_nix_conan
+    runs-on: ${{ inputs.nix_runner }}
+    steps:
+      - *checkout_changed
+
+      - *trust_workspace
+
+      - &validate_nix_runner
+        name: Validate runner
+        shell: bash
+        env:
+          RUNNER_NAME: ${{ inputs.nix_runner }}
+        run: |
+          set -euo pipefail
+          if [[ "${RUNNER_NAME}" == windows* ]]; then
+            echo "::error::clang-tidy-review.yml with use_nix_conan=true does not support Windows runners."
+            exit 1
+          fi
+
+      - *setup_dependencies
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: ${{ inputs.nix_path }}
+
+      - *add_matcher
+
+      - name: Run clang-tidy on changed lines (nix + conan)
+        shell: bash
+        env:
+          BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA_PUSH: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
+          NIX_PACKAGES: ${{ inputs.nix_packages }}
+          CONAN_INSTALL_ENABLED: ${{ toJSON(inputs.conan_install) }}
+          CONANFILE_INPUT: ${{ inputs.conanfile }}
+          CONAN_PROFILE: ${{ inputs.conan_profile }}
+          CONAN_INSTALL_ARGS: ${{ inputs.conan_install_args }}
+          CONAN_OUTPUT_FOLDER: ${{ inputs.conan_output_folder }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base_sha="${BASE_SHA_PR}"
+          else
+            base_sha="${BASE_SHA_PUSH}"
+          fi
+          BASE_SHA="${base_sha}" \
+          HEAD_SHA="${HEAD_SHA}" \
+          PRESET="${PRESET}" \
+          EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
+          USE_NIX_CONAN=true \
+          NIX_PACKAGES="${NIX_PACKAGES}" \
+          CONAN_INSTALL_ENABLED="${CONAN_INSTALL_ENABLED}" \
+          CONANFILE_INPUT="${CONANFILE_INPUT}" \
+          CONAN_PROFILE="${CONAN_PROFILE}" \
+          CONAN_INSTALL_ARGS="${CONAN_INSTALL_ARGS}" \
+          CONAN_OUTPUT_FOLDER="${CONAN_OUTPUT_FOLDER}" \
+          ./devenv/run-clang-tidy-workflow.sh changed
+
+  full-project-container:
     name: full project
     if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.ref == 'refs/heads/main'
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.ref == 'refs/heads/main') &&
+      !inputs.use_nix_conan
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.clang_image }} # zizmor: ignore[unpinned-images]
     steps:
-      - name: Checkout code
+      - &checkout_full
+        name: Checkout code
         uses: actions/checkout@v6
         with:
           submodules: 'recursive'
 
-      - name: Trust workspace for git
-        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - *trust_workspace
 
-      - name: Setup dependencies
-        if: >-
-          inputs.setup_boost ||
-          inputs.qt_version != '' ||
-          inputs.default_setup_script != ''
-        uses: devmarkusb/devenv/.github/actions/setup-dependencies@main
-        with:
-          setup_boost: ${{ inputs.setup_boost }}
-          boost_components: ${{ inputs.boost_components }}
-          qt_version: ${{ inputs.qt_version }}
-          qt_modules: ${{ inputs.qt_modules }}
-          qt_install_deps: ${{ inputs.qt_install_deps }}
-          default_setup_script: ${{ inputs.default_setup_script }}
+      - *setup_dependencies
 
-      - name: Add clang-tidy problem matcher
-        run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
+      - *add_matcher
 
       - name: Run clang-tidy on the full codebase
         shell: bash
@@ -171,14 +277,72 @@ jobs:
           report_dir="${RUNNER_TEMP}/clang-tidy"
           report_file="${report_dir}/full-project.txt"
           mkdir -p "${report_dir}"
-          cmake_extra_args=()
-          if [[ -n "${EXTRA_CMAKE_ARGS}" ]]; then
-            cmake_extra_args+=("--cmake-extra=${EXTRA_CMAKE_ARGS}")
-          fi
-          python3 ./devenv/clang-tidy-review.py full \
-            --report-file "${report_file}" \
-            --preset "${PRESET}" \
-            "${cmake_extra_args[@]}"
+          PRESET="${PRESET}" \
+          EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
+          REPORT_FILE="${report_file}" \
+          USE_NIX_CONAN=false \
+          ./devenv/run-clang-tidy-workflow.sh full
+
+      - name: Upload full scan report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.report_artifact_name }}
+          path: ${{ runner.temp }}/clang-tidy/full-project.txt
+          if-no-files-found: ignore
+
+  full-project-nix:
+    name: full project (nix+conan)
+    if: >-
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.ref == 'refs/heads/main') &&
+      inputs.use_nix_conan
+    runs-on: ${{ inputs.nix_runner }}
+    steps:
+      - *checkout_full
+
+      - *trust_workspace
+
+      - *validate_nix_runner
+
+      - *setup_dependencies
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: ${{ inputs.nix_path }}
+
+      - *add_matcher
+
+      - name: Run clang-tidy on the full codebase (nix + conan)
+        shell: bash
+        env:
+          PRESET: ${{ inputs.preset }}
+          EXTRA_CMAKE_ARGS: ${{ inputs.extra_cmake_args }}
+          NIX_PACKAGES: ${{ inputs.nix_packages }}
+          CONAN_INSTALL_ENABLED: ${{ toJSON(inputs.conan_install) }}
+          CONANFILE_INPUT: ${{ inputs.conanfile }}
+          CONAN_PROFILE: ${{ inputs.conan_profile }}
+          CONAN_INSTALL_ARGS: ${{ inputs.conan_install_args }}
+          CONAN_OUTPUT_FOLDER: ${{ inputs.conan_output_folder }}
+        run: |
+          set -euo pipefail
+
+          report_dir="${RUNNER_TEMP}/clang-tidy"
+          report_file="${report_dir}/full-project.txt"
+          mkdir -p "${report_dir}"
+          PRESET="${PRESET}" \
+          EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
+          REPORT_FILE="${report_file}" \
+          USE_NIX_CONAN=true \
+          NIX_PACKAGES="${NIX_PACKAGES}" \
+          CONAN_INSTALL_ENABLED="${CONAN_INSTALL_ENABLED}" \
+          CONANFILE_INPUT="${CONANFILE_INPUT}" \
+          CONAN_PROFILE="${CONAN_PROFILE}" \
+          CONAN_INSTALL_ARGS="${CONAN_INSTALL_ARGS}" \
+          CONAN_OUTPUT_FOLDER="${CONAN_OUTPUT_FOLDER}" \
+          ./devenv/run-clang-tidy-workflow.sh full
 
       - name: Upload full scan report
         if: always()
