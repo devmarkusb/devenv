@@ -85,12 +85,38 @@ Lockfile format: a JSON object with a `dependencies` array. Each entry requires 
 
 This gives reproducible builds without relying on system packages (e.g., GTest).
 
+##### Integration tiers (what you must wire)
+
+Not every devenv consumer needs the same CMake setup. Pick the tier that matches your repo:
+
+| Tier | When to use | What you wire | Lockfile / deps |
+| ---- | ----------- | ------------- | --------------- |
+| **A — Full lockfile** | Top-level app or library; you own `fetchcontent-lockfile.json` at the project root | `CMAKE_PROJECT_TOP_LEVEL_INCLUDES` → `devenv/cmake/fetch-content-from-lockfile.cmake` in **CMakePresets** or `list(APPEND …)` in root `CMakeLists.txt` **before** the first `project()` | Eager `cmake_include` deps **and** `find_package` entries (e.g. GTest via `package_name`) |
+| **B — Embedded `devenv/`** | Parent does `add_subdirectory(devenv)` (e.g. library nests devenv under `mylib/devenv/`) | Nothing extra for eager deps | `cmake/mb-devenv-ensure-lockfile-eager.cmake` runs from `devenv/CMakeLists.txt` and FetchContent-fetches lockfile entries with `cmake_include` and no `package_name` |
+| **C — CMake modules only** | Toolchains, `mb-devenv-defaults`, workflows, individual `.cmake` helpers | Include only what you need | No lockfile required |
+
+**Lockfile discovery for tier B** (first match wins):
+
+1. `MB_DEVENV_ROOT` + `MB_DEVENV_FETCHCONTENT_LOCKFILE` (explicit)
+2. `../fetchcontent-lockfile.json` relative to the `devenv/` directory (e.g.
+   `uiwrap/fetchcontent-lockfile.json` when devenv lives at `uiwrap/devenv/`)
+3. `${CMAKE_SOURCE_DIR}/fetchcontent-lockfile.json` (classic consumer layout: `devenv/` at repo root)
+
+Tier B does **not** register the `find_package` dependency provider. That still requires tier A
+(CMake only allows it during the **first** `project()`). Nested parents that need GTest-from-lockfile
+must either use tier A at the app root or fetch test deps another way.
+
+**Preset line is tier A wiring, not a universal requirement:**
+`"CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "./devenv/cmake/fetch-content-from-lockfile.cmake"` in
+`CMakePresets.json` is the documented copy-paste for tier A. Tier B consumers do not need it for
+mb-pre-commit and other eager lockfile entries.
+
 #### pre-commit (mb-pre-commit)
 
-When you `add_subdirectory(devenv)` from a parent repo, `devenv/CMakeLists.txt` calls
-`mb_pre_commit_setup_subdirectory()` (mb-pre-commit **v2.5.0+**, via `fetchcontent-lockfile.json`) so commits made
-**inside `devenv/`** get hooks and a `.venv` there. Your parent should still call `mb_pre_commit_setup()` for its own
-tree. The parent hook does **not** run on submodule commits.
+When you `add_subdirectory(devenv)` from a parent repo, `devenv/CMakeLists.txt` loads mb-pre-commit from the lockfile
+(tier B above, or tier A if already configured) and calls `mb_pre_commit_setup_project()` for the `devenv/` tree. Your
+parent should still call `mb_pre_commit_setup_project()` (or the project-level setup your template uses) for its own tree
+when you want hooks at the repo root. The parent hook does **not** run on submodule-only commits inside `devenv/`.
 
 After updating the `devenv` submodule, re-run CMake in the parent so hooks/venv refresh. Sweep target in the submodule:
 `mb-pre-commit-sweep-devenv` (default name from `CMAKE_PROJECT_NAME`).
