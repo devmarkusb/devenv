@@ -76,7 +76,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "packages": ["cmake", "ninja", "pkg-config", "conan", "gcc15"],
         },
         "clang21": {
-            "packages": ["cmake", "ninja", "pkg-config", "conan", "clang_21"],
+            "packages": [
+                "cmake",
+                "ninja",
+                "pkg-config",
+                "conan",
+                "clang_21",
+                "llvmPackages_21.compiler-rt-libc",
+            ],
         },
         "clang21-libcxx": {
             "packages": [
@@ -84,7 +91,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "ninja",
                 "pkg-config",
                 "conan",
-                "llvmPackages_21.clangWithLibcAndBasicRtAndLibcxx",
+                "clang_21",
+                "llvmPackages_21.libcxx",
+                "llvmPackages_21.compiler-rt-libc",
             ],
         },
         "appleclang": {
