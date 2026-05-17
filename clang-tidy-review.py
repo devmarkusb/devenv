@@ -445,7 +445,22 @@ def select_changed_translation_units(
     return selected, line_filter
 
 
-def select_full_translation_units() -> list[str]:
+def select_full_translation_units(build_dir: Path) -> list[str]:
+    compile_db = build_dir / "compile_commands.json"
+    if compile_db.is_file():
+        root = repo_root()
+        units: list[str] = []
+        for entry in json.loads(compile_db.read_text()):
+            file_path = Path(entry["file"])
+            try:
+                rel = file_path.relative_to(root).as_posix()
+            except ValueError:
+                continue
+            if is_translation_unit(rel):
+                units.append(rel)
+        if units:
+            return sorted(set(units))
+
     translation_units = [path for path in list_git_files() if is_translation_unit(path)]
     if not translation_units:
         print("No translation units found; skipping full clang-tidy run.")
@@ -550,7 +565,7 @@ def main() -> int:
     build_dir = repo_root() / "build" / args.preset
 
     if args.mode == "full":
-        translation_units = select_full_translation_units()
+        translation_units = select_full_translation_units(build_dir)
         line_filter = ""
     else:
         translation_units, line_filter = select_changed_translation_units(
