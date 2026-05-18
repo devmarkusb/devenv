@@ -10,9 +10,53 @@ on:
         description: >-
           JSON array of objects, e.g. {"preset":"ci","runner":"ubuntu-latest"} or {"preset":"ci","image":"..."}.
           Optional per entry: "setup_script" (repo-relative bash script), "setup" (inline shell), "setup_shell" (override shell).
+          In Nix+Conan mode, per entry may also override "nix_packages", "conanfile", "conan_install",
+          "conan_profile", "conan_install_args", "conan_output_folder".
           For Windows/MSVC use "runner":"windows-latest" (MSVC setup uses startsWith(runner, 'windows')).
         type: string
         required: true
+      use_nix_conan:
+        description: >-
+          Run each preset inside a Nix shell with optional Conan install instead of native/container mode.
+        type: boolean
+        required: false
+        default: false
+      nix_path:
+        description: NIX_PATH passed to install-nix-action (pin nixpkgs source/channel).
+        type: string
+        required: false
+        default: nixpkgs=channel:nixos-unstable
+      nix_packages:
+        description: Space-separated nixpkgs package names used for commands (cmake, ninja, conan, etc.).
+        type: string
+        required: false
+        default: cmake ninja pkg-config conan
+      conan_install:
+        description: Run conan install before cmake workflow preset in Nix+Conan mode.
+        type: boolean
+        required: false
+        default: true
+      conanfile:
+        description: >-
+          Optional explicit Conan file path. If empty, conanfile.py or conanfile.txt at repo root is auto-detected.
+        type: string
+        required: false
+        default: ''
+      conan_profile:
+        description: Conan profile to use for install (default profile is auto-detected/refreshed).
+        type: string
+        required: false
+        default: default
+      conan_install_args:
+        description: Extra CLI args appended to conan install (space-separated).
+        type: string
+        required: false
+        default: --build=missing
+      conan_output_folder:
+        description: Output folder for Conan generator files.
+        type: string
+        required: false
+        default: build/conan
       default_setup_script:
         description: >-
           Optional repo-relative setup script when a matrix entry omits setup_script.
@@ -52,13 +96,29 @@ jobs:
       fail-fast: false
       matrix:
         presets: ${{ fromJSON(inputs.matrix_config) }}
-    name: "Preset: ${{ matrix.presets.preset }} on ${{ matrix.presets.runner || 'ubuntu-latest' }}"
+    name: "Preset: ${{ matrix.presets.preset }} on ${{ matrix.presets.runner || 'ubuntu-latest' }}${{ inputs.use_nix_conan && ' (nix+conan)' || '' }}"
     runs-on: ${{ matrix.presets.runner || 'ubuntu-latest' }}
-    container: ${{ matrix.presets.image && matrix.presets.image || fromJSON('null') }}
+    container: ${{ !inputs.use_nix_conan && matrix.presets.image && matrix.presets.image || fromJSON('null') }}
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
+      - name: Validate Nix+Conan matrix entry
+        if: ${{ inputs.use_nix_conan }}
+        shell: bash
+        env:
+          RUNNER_NAME: ${{ matrix.presets.runner || 'ubuntu-latest' }}
+          IMAGE_NAME: ${{ matrix.presets.image || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${RUNNER_NAME}" == windows* ]]; then
+            echo "::error::preset-test.yml with use_nix_conan=true does not support Windows runners."
+            exit 1
+          fi
+          if [[ -n "${IMAGE_NAME}" ]]; then
+            echo "::error::matrix entry field 'image' is not supported when use_nix_conan=true."
+            exit 1
+          fi
       - name: Setup dependencies (default)
         if: >-
           inputs.setup_boost ||
@@ -101,12 +161,82 @@ jobs:
         shell: pwsh
         run: ${{ matrix.presets.setup }}
       - name: Setup build environment
-        if: matrix.presets.runner
+        if: >-
+          !inputs.use_nix_conan &&
+          matrix.presets.runner
         uses: lukka/get-cmake@6c740684eca256565af86fb8b8fdf43dd3f6fbc0 # v4.3.0
       - name: Setup MSVC
-        if: startsWith(matrix.presets.runner, 'windows')
+        if: >-
+          !inputs.use_nix_conan &&
+          startsWith(matrix.presets.runner, 'windows')
         uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
+      - name: Install Nix
+        if: ${{ inputs.use_nix_conan }}
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: ${{ inputs.nix_path }}
       - name: Run preset
+        if: ${{ !inputs.use_nix_conan }}
         run: cmake --workflow --preset ${{ matrix.presets.preset }}
+      - name: Conan + preset workflow
+        if: ${{ inputs.use_nix_conan }}
+        shell: bash
+        env:
+          PRESET_NAME: ${{ matrix.presets.preset }}
+          NIX_PACKAGES: ${{ matrix.presets.nix_packages || inputs.nix_packages }}
+          CONAN_INSTALL_ENABLED: >-
+            ${{ matrix.presets.conan_install != null && toJSON(matrix.presets.conan_install)
+                || toJSON(inputs.conan_install) }}
+          CONANFILE_INPUT: ${{ matrix.presets.conanfile || inputs.conanfile }}
+          CONAN_PROFILE: ${{ matrix.presets.conan_profile || inputs.conan_profile }}
+          CONAN_INSTALL_ARGS: ${{ matrix.presets.conan_install_args || inputs.conan_install_args }}
+          CONAN_OUTPUT_FOLDER: ${{ matrix.presets.conan_output_folder || inputs.conan_output_folder }}
+        run: |
+          set -euo pipefail
+
+          read -r -a package_names <<< "${NIX_PACKAGES}"
+          if [[ ${#package_names[@]} -eq 0 ]]; then
+            echo "::error::nix_packages is empty."
+            exit 1
+          fi
+
+          installables=()
+          for package_name in "${package_names[@]}"; do
+            installables+=("nixpkgs#${package_name}")
+          done
+
+          run_in_nix() {
+            nix shell "${installables[@]}" --command "$@"
+          }
+
+          echo "Tool versions:"
+          run_in_nix cmake --version
+          run_in_nix ninja --version
+          run_in_nix conan --version
+
+          if [[ "${CONAN_INSTALL_ENABLED}" == "true" ]]; then
+            conanfile_path="${CONANFILE_INPUT}"
+            if [[ -z "${conanfile_path}" ]]; then
+              if [[ -f "conanfile.py" ]]; then
+                conanfile_path="conanfile.py"
+              elif [[ -f "conanfile.txt" ]]; then
+                conanfile_path="conanfile.txt"
+              fi
+            fi
+
+            if [[ -n "${conanfile_path}" ]]; then
+              read -r -a conan_extra_args <<< "${CONAN_INSTALL_ARGS}"
+              run_in_nix conan profile detect --force
+              run_in_nix conan install \
+                "${conanfile_path}" \
+                --profile "${CONAN_PROFILE}" \
+                --output-folder "${CONAN_OUTPUT_FOLDER}" \
+                "${conan_extra_args[@]}"
+            else
+              echo "No conanfile.py/conanfile.txt found; skipping conan install."
+            fi
+          fi
+
+          run_in_nix cmake --workflow --preset "${PRESET_NAME}"

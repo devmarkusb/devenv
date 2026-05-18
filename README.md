@@ -364,6 +364,14 @@ Inline `setup` defaults to `pwsh` on `msvc` jobs and `bash` otherwise unless `se
 | Input                  | Required | Description                                                                            |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------- |
 | `matrix_config`        | yes      | JSON **array** of preset matrix objects (see below).                                   |
+| `use_nix_conan`        | no       | Switch execution mode to Nix+Conan (`false` keeps native/container mode).              |
+| `nix_path`             | no       | `NIX_PATH` for `cachix/install-nix-action` (default `nixpkgs=channel:nixos-unstable`). |
+| `nix_packages`         | no       | Space-separated nixpkgs package names (default `cmake ninja pkg-config conan`).        |
+| `conan_install`        | no       | Run `conan install` before preset execution in Nix+Conan mode (default `true`).        |
+| `conanfile`            | no       | Explicit Conan file path; auto-detects `conanfile.py` / `conanfile.txt` when empty.    |
+| `conan_profile`        | no       | Conan profile for `conan install` (default `default`; profile is auto-detected).       |
+| `conan_install_args`   | no       | Extra args appended to `conan install` (default `--build=missing`).                    |
+| `conan_output_folder`  | no       | Output folder for Conan generator files (default `build/conan`).                       |
 | `setup_boost`          | no       | Install Boost via cached composite action (recommended).                               |
 | `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
 | `qt_version`           | no       | Pin Qt via install-qt-action when non-empty.                                           |
@@ -373,17 +381,26 @@ Inline `setup` defaults to `pwsh` on `msvc` jobs and `bash` otherwise unless `se
 
 Each matrix object supports:
 
-| Field            | Required | Description                                                                               |
-|------------------|----------|-------------------------------------------------------------------------------------------|
-| `preset`         | yes      | CMake workflow preset name passed to `cmake --workflow --preset`.                         |
-| `runner`         | no       | GitHub-hosted runner (default `ubuntu-latest`). Required for Windows/MSVC.                |
-| `image`          | no       | Job `container:` image (steps run inside the container).                                  |
-| `setup_script`   | no       | Repo-relative bash script run after checkout (install system packages, etc.).             |
-| `setup`          | no       | Inline shell commands for the same purpose (use `setup_shell` on Windows if needed).      |
-| `setup_shell`    | no       | Shell for `setup` only (default `bash`, or `pwsh` when `runner` starts with `windows`).   |
+| Field                 | Required | Description                                                                               |
+|-----------------------|----------|-------------------------------------------------------------------------------------------|
+| `preset`              | yes      | CMake workflow preset name passed to `cmake --workflow --preset`.                         |
+| `runner`              | no       | GitHub-hosted runner (default `ubuntu-latest`). Required for Windows/MSVC.                |
+| `image`               | no       | Job `container:` image (steps run inside the container).                                  |
+| `setup_script`        | no       | Repo-relative bash script run after checkout (install system packages, etc.).             |
+| `setup`               | no       | Inline shell commands for the same purpose (use `setup_shell` on Windows if needed).      |
+| `setup_shell`         | no       | Shell for `setup` only (default `bash`, or `pwsh` when `runner` starts with `windows`).   |
+| `nix_packages`        | no       | Per-row override of workflow input `nix_packages` in Nix+Conan mode.                      |
+| `conanfile`           | no       | Per-row override of workflow input `conanfile` in Nix+Conan mode.                         |
+| `conan_install`       | no       | Per-row override of workflow input `conan_install` in Nix+Conan mode.                     |
+| `conan_profile`       | no       | Per-row override of workflow input `conan_profile` in Nix+Conan mode.                     |
+| `conan_install_args`  | no       | Per-row override of workflow input `conan_install_args` in Nix+Conan mode.                |
+| `conan_output_folder` | no       | Per-row override of workflow input `conan_output_folder` in Nix+Conan mode.               |
 
 Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
 CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
+
+With `use_nix_conan: true`, the same matrix runs inside `nix shell` after an optional `conan install`.
+Nix+Conan mode supports Linux/macOS runners only and rejects matrix `image` entries.
 
 Example with Boost (cached on Windows/macOS):
 
@@ -400,19 +417,29 @@ jobs:
         ]
 ```
 
+Example with Nix+Conan:
+
+```yaml
+jobs:
+  presets:
+    uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
+    with:
+      use_nix_conan: true
+      matrix_config: |
+        [
+          {"preset": "ci", "runner": "ubuntu-latest"},
+          {"preset": "ci", "runner": "macos-latest"}
+        ]
+      conan_install: true
+      conan_install_args: "--build=missing"
+```
+
 For one-off packages, use per-matrix `setup` / `setup_script` instead of forking the reusable workflow.
 
-### preset-test-nix-conan.yml
+#### How a Conan-backed `ci` preset should look
 
-**Trigger:** `workflow_call`
-
-Preset-focused alternative to `preset-test.yml` that keeps the same matrix shape (`preset`, `runner`, setup hooks) but
-boots tools via **Nix** and runs **Conan** before invoking `cmake --workflow --preset`.
-
-#### How `ci` preset should look
-
-For this workflow family, your consumer repo should expose a real workflow preset named `ci` in
-`CMakePresets.json` (configure + build steps). Minimal example:
+For Nix+Conan mode, your consumer repo should expose a real workflow preset named `ci` in `CMakePresets.json`
+(configure + build steps). Minimal example:
 
 ```json
 {
@@ -447,58 +474,10 @@ For this workflow family, your consumer repo should expose a real workflow prese
 }
 ```
 
-| Input | Required | Description |
-| --- | --- | --- |
-| `matrix_config` | yes | JSON array of preset matrix objects (same base schema as `preset-test.yml`). |
-| `nix_path` | no | `NIX_PATH` for `cachix/install-nix-action` (default `nixpkgs=channel:nixos-unstable`). |
-| `nix_packages` | no | Space-separated nixpkgs package names (default `cmake ninja pkg-config conan`). |
-| `conan_install` | no | Run `conan install` before preset execution (default `true`). |
-| `conanfile` | no | Explicit Conan file path; auto-detects `conanfile.py` / `conanfile.txt` when empty. |
-| `conan_profile` | no | Conan profile for `conan install` (default `default`; profile is auto-detected). |
-| `conan_install_args` | no | Extra args appended to `conan install` (default `--build=missing`). |
-| `conan_output_folder` | no | Output folder for Conan generator files (default `build/conan`). |
-
-Matrix object fields are the same as `preset-test.yml` for:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `preset` | yes | CMake workflow preset name passed to `cmake --workflow --preset`. |
-| `runner` | no | Runner label (default `ubuntu-latest`). |
-| `setup_script` | no | Repo-relative bash script run after checkout. |
-| `setup` | no | Inline setup commands. |
-| `setup_shell` | no | Shell for `setup` (`bash` default). |
-| `nix_packages` | no | Per-row override of workflow input `nix_packages`. |
-| `conanfile` | no | Per-row override of workflow input `conanfile`. |
-| `conan_install` | no | Per-row override of workflow input `conan_install` (`true` / `false`). |
-| `conan_profile` | no | Per-row override of workflow input `conan_profile`. |
-| `conan_install_args` | no | Per-row override of workflow input `conan_install_args`. |
-| `conan_output_folder` | no | Per-row override of workflow input `conan_output_folder`. |
-
-Constraints:
-
-- Linux/macOS runners only (Windows is intentionally rejected).
-- Job `container:` images are not supported in this variant (`image` field is rejected).
-
-Example:
-
-```yaml
-jobs:
-  presets-nix-conan:
-    uses: devmarkusb/devenv/.github/workflows/preset-test-nix-conan.yml@main
-    with:
-      matrix_config: |
-        [
-          {"preset": "ci", "runner": "ubuntu-latest"},
-          {"preset": "ci", "runner": "macos-latest"}
-        ]
-      conan_install: true
-      conan_install_args: "--build=missing"
-```
-
 ### Local Nix + Conan via direnv
 
-If you want local behavior close to `preset-test-nix-conan.yml`, use `direnv` with a small `flake.nix` in the consumer
-repo root.
+If you want local behavior close to `preset-test.yml` with `use_nix_conan: true`, use `direnv` with a small `flake.nix`
+in the consumer repo root.
 
 `flake.nix`:
 
@@ -581,8 +560,9 @@ Consumer workflow call:
 ```yaml
 jobs:
   presets-nix-conan:
-    uses: devmarkusb/devenv/.github/workflows/preset-test-nix-conan.yml@main
+    uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
     with:
+      use_nix_conan: true
       matrix_config: |
         [
           {
