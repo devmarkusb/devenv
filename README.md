@@ -737,12 +737,27 @@ workflow — no separate file needed in the consumer repo.
 | Input                  | Required | Description                                                                            |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------- |
 | `preset`               | no       | CMake configure preset (default: `clang-release`).                                     |
+| `use_nix_conan`        | no       | Switch execution mode to Nix+Conan (`false` keeps native Ubuntu mode).                 |
+| `nix_runner`           | no       | Runner label for Nix+Conan mode; Linux/macOS only (default `ubuntu-latest`).           |
+| `nix_path`             | no       | `NIX_PATH` passed to `cachix/install-nix-action` (default nixos-unstable).             |
+| `nix_packages`         | no       | Space-separated nixpkgs packages for CMake, Conan, compiler, and cppcheck.             |
+| `conan_install`        | no       | Run `conan install` before cppcheck in Nix+Conan mode (default `true`).                |
+| `conanfile`            | no       | Optional explicit Conan file; otherwise `conanfile.py`/`.txt` is auto-detected.        |
+| `conan_profile`        | no       | Conan profile for install (default `default`).                                         |
+| `conan_install_args`   | no       | Extra arguments appended to `conan install` (default `--build=missing`).               |
+| `conan_output_folder`  | no       | Output folder for Conan generator files (default `build/conan`).                       |
 | `setup_boost`          | no       | Install Boost via cached composite action (recommended).                               |
 | `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
 | `default_setup_script` | no       | Custom script; `install-boost.sh` uses the composite action.                           |
 
-Runs a full-project cppcheck scan on `ubuntu-latest` by calling `devenv/run-cppcheck.sh`. Consumer repos
-need only an `on:` section and a `uses:` job with optional setup — no cppcheck installation step, no inline shell:
+Runs a full-project cppcheck scan by calling `devenv/run-cppcheck.sh`.
+
+- **Native mode** (`use_nix_conan=false`, default): runs on `ubuntu-latest`.
+- **Nix+Conan mode** (`use_nix_conan=true`): installs Nix, optionally runs `conan install`, then runs
+  cppcheck inside `nix shell`.
+
+Consumer repos need only an `on:` section and a `uses:` job with optional setup — no cppcheck installation
+step, no inline shell:
 
 ```yaml
 name: cppcheck
@@ -772,6 +787,21 @@ jobs:
 
 Projects that require Boost for `cmake --preset` should pass `setup_boost: true` (or legacy
 `default_setup_script: devenv/install-boost.sh`).
+
+Projects that require Conan-provided dependencies can enable Nix+Conan mode:
+
+```yaml
+jobs:
+  cppcheck:
+    uses: devmarkusb/devenv/.github/workflows/cppcheck.yml@main
+    with:
+      use_nix_conan: true
+      nix_packages: "cmake ninja pkg-config conan python3 clang cppcheck"
+      conan_install: true
+      conan_profile: default
+      conan_install_args: "--build=missing"
+      conan_output_folder: build/conan
+```
 
 Place a `CppCheckSuppressions.txt` in the project root to suppress specific findings; the script picks it
 up automatically.
