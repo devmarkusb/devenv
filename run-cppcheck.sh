@@ -80,6 +80,7 @@ PY
     --project="${compile_commands}" \
     --cppcheck-build-dir="${cppcheck_build_dir}" \
     "${define_args[@]}" \
+    --quiet \
     --enable=warning,style,performance,portability \
     --check-level=exhaustive \
     --error-exitcode=1 \
