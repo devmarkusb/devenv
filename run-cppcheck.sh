@@ -10,6 +10,7 @@ build_dir="${2:-${repo_root}/build/${preset}}"
 compile_commands="${build_dir}/compile_commands.json"
 cppcheck_build_dir="${build_dir}/cppcheck"
 suppression_file="${repo_root}/CppCheckSuppressions.txt"
+exclude_file="${repo_root}/CppCheckExcludes.txt"
 
 cppcheck_bin="$(python3 "${script_dir}/install-cppcheck.py" --ensure --print-path)"
 
@@ -25,6 +26,18 @@ mkdir -p "${cppcheck_build_dir}"
 suppression_args=()
 if [[ -f "${suppression_file}" ]]; then
     suppression_args+=("--suppressions-list=${suppression_file}")
+fi
+
+exclude_args=()
+if [[ -f "${exclude_file}" ]]; then
+    while IFS= read -r exclude_path; do
+        [[ -z "${exclude_path}" || "${exclude_path}" == \#* ]] && continue
+        if [[ "${exclude_path}" = /* ]]; then
+            exclude_args+=("-i${exclude_path}")
+        else
+            exclude_args+=("-i${repo_root}/${exclude_path}")
+        fi
+    done <"${exclude_file}"
 fi
 
 # Cppcheck does not apply the real compiler's builtin macros (__clang__, __APPLE__, …).
@@ -89,5 +102,6 @@ PY
     --library=googletest \
     --suppress=missingIncludeSystem \
     "${suppression_args[@]}" \
+    "${exclude_args[@]}" \
     --template=gcc \
     -i"${build_dir}/_deps"
