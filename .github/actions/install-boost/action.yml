@@ -23,7 +23,7 @@ runs:
           ${{ env.VCPKG_INSTALLATION_ROOT }}\downloads
           ${{ env.VCPKG_INSTALLATION_ROOT }}\packages
           ${{ env.VCPKG_INSTALLATION_ROOT }}\buildtrees
-        key: vcpkg-boost-${{ inputs.components }}-${{ hashFiles('devenv/install-boost.py') }}
+        key: vcpkg-boost-${{ inputs.components }}-${{ hashFiles('devenv/scripts/install-boost.py') }}
         restore-keys: |
           vcpkg-boost-${{ inputs.components }}-
 
@@ -36,7 +36,7 @@ runs:
           /opt/vcpkg/downloads
           /opt/vcpkg/packages
           /opt/vcpkg/buildtrees
-        key: vcpkg-boost-${{ inputs.components }}-linux-${{ hashFiles('devenv/install-boost.py') }}
+        key: vcpkg-boost-${{ inputs.components }}-linux-${{ hashFiles('devenv/scripts/install-boost.py') }}
         restore-keys: |
           vcpkg-boost-${{ inputs.components }}-linux-
 
@@ -48,7 +48,7 @@ runs:
           ~/Library/Caches/Homebrew
           /opt/homebrew/var/homebrew/cache
           /usr/local/var/homebrew/cache
-        key: homebrew-boost-${{ inputs.components }}-${{ hashFiles('devenv/install-boost.py') }}
+        key: homebrew-boost-${{ inputs.components }}-${{ hashFiles('devenv/scripts/install-boost.py') }}
         restore-keys: |
           homebrew-boost-${{ inputs.components }}-
 
@@ -56,7 +56,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        script=devenv/install-boost.sh
+        script=devenv/scripts/install-boost.sh
         if [[ ! -f "${script}" ]]; then
           echo "::error::${script} not found (run from repository root with devenv submodule)"
           exit 1

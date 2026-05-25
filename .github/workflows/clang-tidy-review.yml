@@ -69,7 +69,7 @@ on:
       default_setup_script:
         description: >-
           Optional repo-relative bash script run after checkout before configure.
-          devenv/install-boost.sh and devenv/install-qt.sh use cached composite actions;
+          devenv/scripts/install-boost.sh and devenv/scripts/install-qt.sh use cached composite actions;
           other paths are executed with bash.
         type: string
         required: false
@@ -88,7 +88,7 @@ on:
       qt_version:
         description: >-
           Pin Qt with install-qt-action (cached). Also used when default_setup_script is
-          devenv/install-qt.sh (defaults to 6.9.3).
+          devenv/scripts/install-qt.sh (defaults to 6.9.3).
         type: string
         required: false
         default: ''
@@ -174,7 +174,7 @@ jobs:
           PRESET="${PRESET}" \
           EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
           USE_NIX_CONAN=false \
-          ./devenv/run-clang-tidy-workflow.sh changed
+          ./devenv/scripts/run-clang-tidy-workflow.sh changed
 
   changed-lines-nix:
     name: changed lines (nix+conan)
@@ -241,7 +241,7 @@ jobs:
           CONAN_PROFILE="${CONAN_PROFILE}" \
           CONAN_INSTALL_ARGS="${CONAN_INSTALL_ARGS}" \
           CONAN_OUTPUT_FOLDER="${CONAN_OUTPUT_FOLDER}" \
-          ./devenv/run-clang-tidy-workflow.sh changed
+          ./devenv/scripts/run-clang-tidy-workflow.sh changed
 
   full-project-container:
     name: full project
@@ -281,7 +281,7 @@ jobs:
           EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS}" \
           REPORT_FILE="${report_file}" \
           USE_NIX_CONAN=false \
-          ./devenv/run-clang-tidy-workflow.sh full
+          ./devenv/scripts/run-clang-tidy-workflow.sh full
 
       - name: Upload full scan report
         if: always()
@@ -342,7 +342,7 @@ jobs:
           CONAN_PROFILE="${CONAN_PROFILE}" \
           CONAN_INSTALL_ARGS="${CONAN_INSTALL_ARGS}" \
           CONAN_OUTPUT_FOLDER="${CONAN_OUTPUT_FOLDER}" \
-          ./devenv/run-clang-tidy-workflow.sh full
+          ./devenv/scripts/run-clang-tidy-workflow.sh full
 
       - name: Upload full scan report
         if: always()

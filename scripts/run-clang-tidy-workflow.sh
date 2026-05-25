@@ -92,7 +92,7 @@ if [[ "${MODE}" == "changed" ]]; then
     echo "::error::HEAD_SHA is required for changed mode."
     exit 1
   fi
-  tool_runner python3 ./devenv/clang-tidy-review.py changed \
+  tool_runner python3 ./devenv/scripts/clang-tidy-review.py changed \
     --base "${BASE_SHA}" \
     --head "${HEAD_SHA}" \
     --preset "${PRESET}" \
@@ -104,7 +104,7 @@ report_args=()
 if [[ -n "${REPORT_FILE}" ]]; then
   report_args+=(--report-file "${REPORT_FILE}")
 fi
-tool_runner python3 ./devenv/clang-tidy-review.py full \
+tool_runner python3 ./devenv/scripts/clang-tidy-review.py full \
   "${report_args[@]}" \
   --preset "${PRESET}" \
   "${cmake_extra_args[@]}"

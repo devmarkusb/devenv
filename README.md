@@ -27,7 +27,7 @@ git submodule update --init --recursive --recommend-shallow
 Or use the convenience script (same directory):
 
 ```bash
-./devenv/git-sub.sh
+./devenv/scripts/git-sub.sh
 ```
 
 `git-sub.sh` also initializes and runs **Git LFS** (`git lfs pull`) if your repo uses LFS (detected via `filter=lfs` in
@@ -172,22 +172,22 @@ preset that produces a `compile_commands.json`).
 
 ```bash
 # Lint only lines changed since the upstream / origin/main / main branch
-python3 devenv/clang-tidy-review.py changed
+python3 devenv/scripts/clang-tidy-review.py changed
 
 # Lint the full project
-python3 devenv/clang-tidy-review.py full
+python3 devenv/scripts/clang-tidy-review.py full
 
 # Show warning statistics instead of suppressing noise with --quiet
-python3 devenv/clang-tidy-review.py changed --show-summary
+python3 devenv/scripts/clang-tidy-review.py changed --show-summary
 
 # Install or upgrade to the latest available clang-tidy first
-python3 devenv/clang-tidy-review.py changed --install
+python3 devenv/scripts/clang-tidy-review.py changed --install
 
 # Override the CMake preset (default: clang-release)
-python3 devenv/clang-tidy-review.py full --preset clang-debug
+python3 devenv/scripts/clang-tidy-review.py full --preset clang-debug
 
 # Save output to a file while also printing it
-python3 devenv/clang-tidy-review.py full --report-file /tmp/tidy.txt
+python3 devenv/scripts/clang-tidy-review.py full --report-file /tmp/tidy.txt
 ```
 
 In `changed` mode, if any changed file is a header, a CMake file, or anything under `cmake/` /
@@ -207,12 +207,12 @@ in CI). **Local fallback:** `apt` on Debian/Ubuntu, Homebrew on macOS. Exports *
 
 **CI (recommended):** pass `qt_version: '6.9.3'` (and `qt_install_deps: false` in Beman Gentoo containers) to
 reusable workflows — uses `devenv/.github/actions/install-qt` with a cached online installer. Legacy
-`default_setup_script: devenv/install-qt.sh` still maps to the same action (defaults to Qt **6.9.3**).
+`default_setup_script: devenv/scripts/install-qt.sh` still maps to the same action (defaults to Qt **6.9.3**).
 
 ```bash
-python3 devenv/install-qt.py --ensure --print-prefix-path
+python3 devenv/scripts/install-qt.py --ensure --print-prefix-path
 cmake --preset clang-release -DEXAMPLE_USE_IMPLEMENTATION=qt
-python3 devenv/clang-tidy-review.py full --preset clang-release \
+python3 devenv/scripts/clang-tidy-review.py full --preset clang-release \
   --cmake-extra -DEXAMPLE_USE_IMPLEMENTATION=qt
 ```
 
@@ -227,10 +227,10 @@ in CI, with install retries). **macOS:** Homebrew. **Windows:** vcpkg (cached in
 
 ```bash
 # Install if missing, print the CMake prefix
-python3 devenv/install-boost.py --ensure --print-prefix-path
+python3 devenv/scripts/install-boost.py --ensure --print-prefix-path
 
 # CI helper (also appends CMAKE_PREFIX_PATH to GITHUB_ENV when set)
-./devenv/install-boost.sh
+./devenv/scripts/install-boost.sh
 ```
 
 Optional flags: `--components property-tree` (vcpkg package names `boost-<component>`),
@@ -239,7 +239,7 @@ Optional flags: `--components property-tree` (vcpkg package names `boost-<compon
 **CI usage (recommended):** pass `setup_boost: true` to `preset-test.yml`, `build-and-test.yml`,
 `clang-tidy-review.yml`, or `cppcheck.yml` — runs `devenv/.github/actions/install-boost` (cached
 `/opt/vcpkg` on Beman containers when Portage is unavailable, apt on Ubuntu, Homebrew on macOS). Legacy
-`default_setup_script: devenv/install-boost.sh` is equivalent.
+`default_setup_script: devenv/scripts/install-boost.sh` is equivalent.
 
 ### install-cppcheck.py
 
@@ -248,10 +248,10 @@ Homebrew, winget, choco). Used internally by `run-cppcheck.sh` but can also be c
 
 ```bash
 # Print the path to the detected cppcheck executable
-python3 devenv/install-cppcheck.py --print-path
+python3 devenv/scripts/install-cppcheck.py --print-path
 
 # Install if not present, then print the path
-python3 devenv/install-cppcheck.py --ensure --print-path
+python3 devenv/scripts/install-cppcheck.py --ensure --print-path
 ```
 
 ### run-cppcheck.sh
@@ -261,11 +261,11 @@ designed to be called from the consumer's project root (either locally or from C
 
 ```bash
 # Run with the default preset (clang-release) — cmake configure + cppcheck
-./devenv/run-cppcheck.sh
+./devenv/scripts/run-cppcheck.sh
 
 # Override preset and/or build directory
-./devenv/run-cppcheck.sh clang-debug
-./devenv/run-cppcheck.sh clang-release /tmp/custom-build
+./devenv/scripts/run-cppcheck.sh clang-debug
+./devenv/scripts/run-cppcheck.sh clang-release /tmp/custom-build
 ```
 
 The script:
@@ -730,7 +730,7 @@ workflow — no separate file needed in the consumer repo.
 | `boost_components`     | no       | Boost vcpkg components (default `property-tree`).                                      |
 | `default_setup_script` | no       | Custom script; `install-boost.sh` uses the composite action.                           |
 
-Runs a full-project cppcheck scan by calling `devenv/run-cppcheck.sh`.
+Runs a full-project cppcheck scan by calling `devenv/scripts/run-cppcheck.sh`.
 
 - **Native mode** (`use_nix_conan=false`, default): runs on `ubuntu-latest`.
 - **Nix+Conan mode** (`use_nix_conan=true`): installs Nix, optionally runs `conan install`, then runs
@@ -745,11 +745,11 @@ name: cppcheck
 on:
   pull_request:
     paths: ["**/*.cpp", "**/*.hpp", "**/*.h", "cmake/**", "devenv/cmake/**",
-            "CppCheckSuppressions.txt", "devenv/run-cppcheck.sh"]
+            "CppCheckSuppressions.txt", "devenv/scripts/run-cppcheck.sh"]
   push:
     branches: [main]
     paths: ["**/*.cpp", "**/*.hpp", "**/*.h", "cmake/**", "devenv/cmake/**",
-            "CppCheckSuppressions.txt", "devenv/run-cppcheck.sh"]
+            "CppCheckSuppressions.txt", "devenv/scripts/run-cppcheck.sh"]
   schedule:
     - cron: "31 4 * * 0"
   workflow_dispatch:
@@ -766,7 +766,7 @@ jobs:
 ```
 
 Projects that require Boost for `cmake --preset` should pass `setup_boost: true` (or legacy
-`default_setup_script: devenv/install-boost.sh`).
+`default_setup_script: devenv/scripts/install-boost.sh`).
 
 Projects that require Conan-provided dependencies can enable Nix+Conan mode:
 

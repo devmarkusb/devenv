@@ -24,12 +24,12 @@ FULL_SCAN_TRIGGER_PATHS = {
     ".clang-tidy",
     "CMakeLists.txt",
     "CMakePresets.json",
-    "devenv/clang-tidy-review.py",
+    "devenv/scripts/clang-tidy-review.py",
 }
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parents[2]
 
 
 def normalize_cmake_extra_argv(argv: list[str]) -> list[str]:
