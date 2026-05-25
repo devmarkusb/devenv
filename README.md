@@ -195,8 +195,9 @@ In `changed` mode, if any changed file is a header, a CMake file, or anything un
 any translation unit). The diff base defaults to the merge-base with the upstream branch; override with
 `--base <sha>`.
 
-Also ships `clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
-`::add-matcher::devenv/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into inline PR annotations.
+Also ships `.github/workflows/clang-tidy-problem-matcher.json` which GitHub Actions workflows can load with
+`::add-matcher::devenv/.github/workflows/clang-tidy-problem-matcher.json` to turn clang-tidy diagnostics into
+inline PR annotations.
 
 ### install-qt.py / install-qt.sh
 
@@ -707,8 +708,8 @@ jobs:
       conan_output_folder: build/conan
 ```
 
-The problem matcher (`devenv/clang-tidy-problem-matcher.json`) is loaded automatically inside the reusable
-workflow — no separate file needed in the consumer repo.
+The problem matcher (`devenv/.github/workflows/clang-tidy-problem-matcher.json`) is loaded automatically inside
+the reusable workflow — no separate file needed in the consumer repo.
 
 ### cppcheck.yml
 
