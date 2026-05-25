@@ -151,7 +151,7 @@ jobs:
 
       - &add_matcher
         name: Add clang-tidy problem matcher
-        run: echo "::add-matcher::devenv/clang-tidy-problem-matcher.json"
+        run: echo "::add-matcher::devenv/.github/workflows/clang-tidy-problem-matcher.json"
 
       - name: Run clang-tidy on changed lines
         shell: bash
