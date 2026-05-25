@@ -58,7 +58,7 @@ on:
       default_setup_script:
         description: >-
           Optional repo-relative bash script run after checkout before configure.
-          devenv/install-boost.sh uses the cached install-boost composite action.
+          devenv/scripts/install-boost.sh uses the cached install-boost composite action.
         type: string
         required: false
         default: ''
@@ -105,7 +105,7 @@ jobs:
         shell: bash
         env:
           PRESET: ${{ inputs.preset }}
-        run: ./devenv/run-cppcheck.sh "${PRESET}"
+        run: ./devenv/scripts/run-cppcheck.sh "${PRESET}"
 
   full-project-nix:
     name: full project (nix+conan)
@@ -191,4 +191,4 @@ jobs:
             fi
           fi
 
-          run_in_nix ./devenv/run-cppcheck.sh "${PRESET}"
+          run_in_nix ./devenv/scripts/run-cppcheck.sh "${PRESET}"

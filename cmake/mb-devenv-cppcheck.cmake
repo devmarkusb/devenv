@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.10)
 #
 # Then configure with -DMB_DEVENV_CPPCHECK=ON to activate.
 #
-# This is independent of devenv/run-cppcheck.sh, which runs cppcheck as a
+# This is independent of devenv/scripts/run-cppcheck.sh, which runs cppcheck as a
 # dedicated post-configure analysis step using --project=compile_commands.json.
 # Use one or both; they complement each other.
 #
@@ -26,7 +26,7 @@ option(
 )
 option(
     MB_DEVENV_CPPCHECK_AUTO_INSTALL
-    "Attempt to install cppcheck with devenv/install-cppcheck.py when it is missing."
+    "Attempt to install cppcheck with devenv/scripts/install-cppcheck.py when it is missing."
     OFF
 )
 
@@ -45,7 +45,7 @@ endfunction()
 
 function(_mb_devenv_cppcheck_try_install out_var)
     set(_mb_devenv_cppcheck_installer
-        "${PROJECT_SOURCE_DIR}/devenv/install-cppcheck.py"
+        "${PROJECT_SOURCE_DIR}/devenv/scripts/install-cppcheck.py"
     )
     if(NOT EXISTS "${_mb_devenv_cppcheck_installer}")
         message(
@@ -147,7 +147,7 @@ if(MB_DEVENV_CPPCHECK)
             WARNING
             "MB_DEVENV_CPPCHECK is ON, but cppcheck was not found. "
             "Set MB_DEVENV_CPPCHECK_AUTO_INSTALL=ON for a best-effort install via "
-            "devenv/install-cppcheck.py, or install cppcheck manually."
+            "devenv/scripts/install-cppcheck.py, or install cppcheck manually."
         )
     endif()
 endif()

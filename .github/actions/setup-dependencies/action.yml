@@ -14,7 +14,7 @@ inputs:
   qt_version:
     description: >-
       Pin Qt with install-qt-action when non-empty, or when default_setup_script is
-      devenv/install-qt.sh (defaults to 6.9.3).
+      devenv/scripts/install-qt.sh (defaults to 6.9.3).
     required: false
     default: ''
   qt_modules:
@@ -37,7 +37,7 @@ runs:
     - name: Install Qt
       if: >-
         inputs.qt_version != '' ||
-        inputs.default_setup_script == 'devenv/install-qt.sh'
+        inputs.default_setup_script == 'devenv/scripts/install-qt.sh'
       uses: devmarkusb/devenv/.github/actions/install-qt@main
       with:
         version: ${{ inputs.qt_version != '' && inputs.qt_version || '6.9.3' }}
@@ -47,7 +47,7 @@ runs:
     - name: Install Boost
       if: >-
         inputs.setup_boost == 'true' ||
-        inputs.default_setup_script == 'devenv/install-boost.sh'
+        inputs.default_setup_script == 'devenv/scripts/install-boost.sh'
       uses: devmarkusb/devenv/.github/actions/install-boost@main
       with:
         components: ${{ inputs.boost_components }}
@@ -55,8 +55,8 @@ runs:
     - name: Consumer setup (custom script)
       if: >-
         inputs.default_setup_script != '' &&
-        inputs.default_setup_script != 'devenv/install-boost.sh' &&
-        inputs.default_setup_script != 'devenv/install-qt.sh'
+        inputs.default_setup_script != 'devenv/scripts/install-boost.sh' &&
+        inputs.default_setup_script != 'devenv/scripts/install-qt.sh'
       shell: bash
       env:
         SETUP_SCRIPT: ${{ inputs.default_setup_script }}

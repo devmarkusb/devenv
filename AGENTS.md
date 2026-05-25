@@ -47,8 +47,8 @@ Hooks (`.pre-commit-config.yaml`): pre-commit-hooks, markdownlint (`.markdownlin
 |-------|----------------|
 | GitHub Actions syntax | `actionlint -color` (CI installs v1.7.12; **unverified** locally if `actionlint` not on PATH) |
 | Workflow security | `zizmor` in CI only (`.github/zizmor.yml`) |
-| clang-tidy (consumer pattern) | `python3 clang-tidy-review.py changed` or `full` (needs configured build + `compile_commands.json`) |
-| cppcheck (consumer pattern) | `./run-cppcheck.sh [preset] [build-dir]` |
+| clang-tidy (consumer pattern) | `python3 scripts/clang-tidy-review.py changed` or `full` (needs configured build + `compile_commands.json`) |
+| cppcheck (consumer pattern) | `./scripts/run-cppcheck.sh [preset] [build-dir]` |
 
 Python scripts: `clang-tidy-review.py`, `install-boost.py`, `install-cppcheck.py`, `run-cppcheck.sh` — keep compatible with **Python 3.10+** (pyupgrade target).
 

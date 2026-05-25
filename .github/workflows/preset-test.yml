@@ -60,7 +60,7 @@ on:
       default_setup_script:
         description: >-
           Optional repo-relative setup script when a matrix entry omits setup_script.
-          devenv/install-boost.sh and devenv/install-qt.sh use cached composite actions.
+          devenv/scripts/install-boost.sh and devenv/scripts/install-qt.sh use cached composite actions.
         type: string
         required: false
         default: ''
