@@ -127,6 +127,18 @@ def git_output(*args: str, check: bool = True) -> str:
     return result.stdout.strip()
 
 
+def resolve_commit_ref(ref: str) -> str:
+    """Resolve a ref to a commit SHA, or return empty if it is unavailable."""
+    result = run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
 def command_exists(name: str) -> bool:
     return shutil.which(name) is not None
 
@@ -391,14 +403,24 @@ def normalize_line_ranges(ranges: list[list[int]]) -> list[list[int]]:
 
 
 def build_changed_line_filter(base_sha: str, head_sha: str) -> str:
-    diff_output = git_output(
-        "diff",
-        "--unified=0",
-        "--no-color",
-        "--diff-filter=ACMR",
-        base_sha,
-        head_sha,
-    )
+    try:
+        diff_output = git_output(
+            "diff",
+            "--unified=0",
+            "--no-color",
+            "--diff-filter=ACMR",
+            base_sha,
+            head_sha,
+        )
+    except subprocess.CalledProcessError as error:
+        stderr = (error.stderr or "").strip()
+        print(
+            "Unable to build clang-tidy changed-line filter from "
+            f"{base_sha} to {head_sha}; skipping changed-lines run."
+        )
+        if stderr:
+            print(stderr)
+        return ""
 
     current_path = ""
     changed_ranges_by_path: dict[str, list[list[int]]] = {}
@@ -444,7 +466,9 @@ def resolve_default_base_ref() -> str:
     for ref in ("@{upstream}", "origin/main", "main", "HEAD^"):
         if (
             run(
-                ["git", "rev-parse", "--verify", "--quiet", ref], check=False
+                ["git", "rev-parse", "--verify", "--quiet", ref],
+                check=False,
+                capture_output=True,
             ).returncode
             == 0
         ):
@@ -480,8 +504,28 @@ def filter_translation_units_to_compile_db(
 def select_changed_translation_units(
     base_ref: str, head_ref: str, build_dir: Path
 ) -> tuple[list[str], str]:
-    head_sha = git_output("rev-parse", head_ref)
-    base_sha = base_ref or resolve_default_base_ref()
+    head_sha = resolve_commit_ref(head_ref)
+    if not head_sha:
+        print(
+            f"Diff head '{head_ref}' is not available in this checkout; "
+            "skipping changed-lines clang-tidy run."
+        )
+        return [], ""
+
+    if base_ref:
+        if base_ref == ZERO_SHA:
+            base_sha = ZERO_SHA
+        else:
+            base_sha = resolve_commit_ref(base_ref)
+            if not base_sha:
+                print(
+                    f"Diff base '{base_ref}' is not available in this checkout; "
+                    "falling back to the default diff base."
+                )
+                base_sha = resolve_default_base_ref()
+    else:
+        base_sha = resolve_default_base_ref()
+
     if base_sha == ZERO_SHA:
         base_sha = git_output("rev-list", "--max-count=1", f"{head_sha}^", check=False)
 
@@ -489,9 +533,19 @@ def select_changed_translation_units(
         print("No diff base available; skipping changed-lines clang-tidy run.")
         return [], ""
 
-    changed_output = git_output(
-        "diff", "--name-only", "--diff-filter=ACMR", base_sha, head_sha
-    )
+    try:
+        changed_output = git_output(
+            "diff", "--name-only", "--diff-filter=ACMR", base_sha, head_sha
+        )
+    except subprocess.CalledProcessError as error:
+        stderr = (error.stderr or "").strip()
+        print(
+            "Unable to diff changed files from "
+            f"{base_sha} to {head_sha}; skipping changed-lines clang-tidy run."
+        )
+        if stderr:
+            print(stderr)
+        return [], ""
     changed_paths = [line for line in changed_output.splitlines() if line]
     if not changed_paths:
         print("No changed files to analyze.")
