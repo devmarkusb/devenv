@@ -6,6 +6,12 @@ cmake_minimum_required(VERSION 3.24)
 
 include(FetchContent)
 
+set(MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS
+    ON
+    CACHE BOOL
+    "During lockfile FetchContent include/MakeAvailable, suppress warnings for third-party targets."
+)
+
 function(_mb_devenv_ensure_apply_cmake_variables dep_json error_prefix)
     string(
         JSON kind
@@ -195,5 +201,23 @@ foreach(_mb_devenv_ensure_i RANGE "${_mb_devenv_ensure_max}")
 
     string(TOLOWER "${_mb_devenv_ensure_name}" _mb_devenv_ensure_lc)
     set(_mb_devenv_ensure_src "${${_mb_devenv_ensure_lc}_SOURCE_DIR}")
+    if(MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS)
+        set(_mb_devenv_ensure_save_cxx "${CMAKE_CXX_FLAGS}")
+        set(_mb_devenv_ensure_save_c "${CMAKE_C_FLAGS}")
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|IntelLLVM|Intel")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+        elseif(MSVC)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
+        endif()
+        if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang|IntelLLVM|Intel")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+        elseif(MSVC)
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /w")
+        endif()
+    endif()
     include("${_mb_devenv_ensure_src}/${_mb_devenv_ensure_cmake_include}")
+    if(MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS)
+        set(CMAKE_CXX_FLAGS "${_mb_devenv_ensure_save_cxx}")
+        set(CMAKE_C_FLAGS "${_mb_devenv_ensure_save_c}")
+    endif()
 endforeach()

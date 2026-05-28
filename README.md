@@ -70,6 +70,9 @@ CMake **dependency provider** (CMake 3.24+). Include it as a top-level include (
 - Implements `FIND_PACKAGE`: when the project calls `find_package(PkgName)`, the provider can satisfy it by FetchContent
   using `git_repository` and `git_tag` from the lockfile.
 - Adds the lockfile to `CMAKE_CONFIGURE_DEPENDS` so CMake reconfigures when the lockfile changes.
+- Suppresses warnings from fetched dependency sources by default while lockfile dependencies are made available. Set
+  `MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS=OFF` to keep dependency warnings visible. Set
+  `MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS=OFF` to keep consumer `-Werror`/`/WX` strict for dependencies.
 
 Lockfile format: a JSON object with a `dependencies` array. Each entry requires **`name`**, **`git_repository`**, and
 **`git_tag`**. Optional fields:
