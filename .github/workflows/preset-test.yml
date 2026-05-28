@@ -164,7 +164,7 @@ jobs:
         if: >-
           !inputs.use_nix_conan &&
           matrix.presets.runner
-        uses: lukka/get-cmake@6c740684eca256565af86fb8b8fdf43dd3f6fbc0 # v4.3.0
+        uses: lukka/get-cmake@f57d5c55bca331a49bdc52a6069f211f1363a275 # v4.3.2
       - name: Setup MSVC
         if: >-
           !inputs.use_nix_conan &&

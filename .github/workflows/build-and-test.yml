@@ -181,7 +181,7 @@ jobs:
         run: sudo chmod -R 777 /opt/
       - name: Setup latest CMake and Ninja
         if: matrix.config.compiler == 'msvc' || matrix.config.compiler == 'appleclang'
-        uses: lukka/get-cmake@6c740684eca256565af86fb8b8fdf43dd3f6fbc0 # v4.3.0
+        uses: lukka/get-cmake@f57d5c55bca331a49bdc52a6069f211f1363a275 # v4.3.2
       - name: Print installed software
         shell: bash
         run: |
