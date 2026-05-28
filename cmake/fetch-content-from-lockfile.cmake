@@ -26,7 +26,11 @@
 #   FetchContent_Declare(... SYSTEM) only marks that dependency's include
 #   directories as SYSTEM (compiler treats them like -isystem). It does not
 #   change how third-party .c/.cpp files are compiled: those targets still use
-#   your CMAKE_C/CXX_FLAGS, so -Werror (/WX on MSVC) can still fail the build.
+#   your CMAKE_C/CXX_FLAGS, so strict consumer warning flags can still fail or
+#   clutter the build.
+#   Set MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS=ON (default) to append
+#   -w (or /w on MSVC) only for the duration of each lockfile include() /
+#   FetchContent_MakeAvailable. Set to OFF to keep dependency warnings visible.
 #   Set MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS=ON (default) to append
 #   -Wno-error (or relax /WX for MSVC) only for the duration of each lockfile
 #   include() / FetchContent_MakeAvailable. Set to OFF to keep strict flags.
@@ -39,6 +43,11 @@ set(MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS
     ON
     CACHE BOOL
     "During lockfile FetchContent include/MakeAvailable, relax -Werror (or MSVC /WX) for third-party targets."
+)
+set(MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS
+    ON
+    CACHE BOOL
+    "During lockfile FetchContent include/MakeAvailable, suppress warnings for third-party targets."
 )
 
 if(NOT MB_DEVENV_FETCHCONTENT_LOCKFILE)
@@ -148,46 +157,84 @@ if(EXISTS "${lockfile_candidate}")
     endfunction()
 
     # SYSTEM on FetchContent does not affect compiling third-party sources with
-    # -Werror; temporarily relax only while a dependency is being made available.
-    macro(mb_devenv_fetchcontent_relax_werror_push)
-        if(MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS)
+    # consumer warning flags; temporarily adjust only while a dependency is being made available.
+    macro(mb_devenv_fetchcontent_dependency_flags_push)
+        if(
+            MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS
+            OR MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS
+        )
             set(_mb_devenv_fc_save_cxx "${CMAKE_CXX_FLAGS}")
             set(_mb_devenv_fc_save_c "${CMAKE_C_FLAGS}")
-            if(
-                CMAKE_CXX_COMPILER_ID
-                    MATCHES
-                    "GNU|Clang|AppleClang|IntelLLVM|Intel"
-            )
-                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
-            elseif(MSVC)
-                string(
-                    REPLACE "/WX"
-                    "/WX-"
-                    CMAKE_CXX_FLAGS
-                    "${CMAKE_CXX_FLAGS}"
+            if(MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS)
+                if(
+                    CMAKE_CXX_COMPILER_ID
+                        MATCHES
+                        "GNU|Clang|AppleClang|IntelLLVM|Intel"
                 )
-                string(
-                    REPLACE "-WX"
-                    "-WX-"
-                    CMAKE_CXX_FLAGS
-                    "${CMAKE_CXX_FLAGS}"
+                    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
+                elseif(MSVC)
+                    string(
+                        REPLACE "/WX"
+                        "/WX-"
+                        CMAKE_CXX_FLAGS
+                        "${CMAKE_CXX_FLAGS}"
+                    )
+                    string(
+                        REPLACE "-WX"
+                        "-WX-"
+                        CMAKE_CXX_FLAGS
+                        "${CMAKE_CXX_FLAGS}"
+                    )
+                endif()
+                if(
+                    CMAKE_C_COMPILER_ID
+                        MATCHES
+                        "GNU|Clang|AppleClang|IntelLLVM|Intel"
                 )
+                    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
+                elseif(MSVC)
+                    string(
+                        REPLACE "/WX"
+                        "/WX-"
+                        CMAKE_C_FLAGS
+                        "${CMAKE_C_FLAGS}"
+                    )
+                    string(
+                        REPLACE "-WX"
+                        "-WX-"
+                        CMAKE_C_FLAGS
+                        "${CMAKE_C_FLAGS}"
+                    )
+                endif()
             endif()
-            if(
-                CMAKE_C_COMPILER_ID
-                    MATCHES
-                    "GNU|Clang|AppleClang|IntelLLVM|Intel"
-            )
-                set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
-            elseif(MSVC)
-                string(REPLACE "/WX" "/WX-" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-                string(REPLACE "-WX" "-WX-" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+            if(MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS)
+                if(
+                    CMAKE_CXX_COMPILER_ID
+                        MATCHES
+                        "GNU|Clang|AppleClang|IntelLLVM|Intel"
+                )
+                    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+                elseif(MSVC)
+                    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
+                endif()
+                if(
+                    CMAKE_C_COMPILER_ID
+                        MATCHES
+                        "GNU|Clang|AppleClang|IntelLLVM|Intel"
+                )
+                    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+                elseif(MSVC)
+                    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /w")
+                endif()
             endif()
         endif()
     endmacro()
 
-    macro(mb_devenv_fetchcontent_relax_werror_pop)
-        if(MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS)
+    macro(mb_devenv_fetchcontent_dependency_flags_pop)
+        if(
+            MB_DEVENV_FETCHCONTENT_RELAX_WERROR_FOR_DEPS
+            OR MB_DEVENV_FETCHCONTENT_SUPPRESS_WARNINGS_FOR_DEPS
+        )
             set(CMAKE_CXX_FLAGS "${_mb_devenv_fc_save_cxx}")
             set(CMAKE_C_FLAGS "${_mb_devenv_fc_save_c}")
         endif()
@@ -312,11 +359,11 @@ if(EXISTS "${lockfile_candidate}")
                     )
                     string(TOLOWER "${_mb_devenv_fc_name}" _mb_devenv_fc_lc)
                     set(_mb_devenv_fc_src_var "${_mb_devenv_fc_lc}_SOURCE_DIR")
-                    mb_devenv_fetchcontent_relax_werror_push()
+                    mb_devenv_fetchcontent_dependency_flags_push()
                     include(
                         "${${_mb_devenv_fc_src_var}}/${_mb_devenv_fc_cmake_include}"
                     )
-                    mb_devenv_fetchcontent_relax_werror_pop()
+                    mb_devenv_fetchcontent_dependency_flags_pop()
                 else()
                     if(POLICY CMP0169)
                         cmake_policy(PUSH)
@@ -359,9 +406,9 @@ if(EXISTS "${lockfile_candidate}")
                             )
                         endif()
                     endif()
-                    mb_devenv_fetchcontent_relax_werror_push()
+                    mb_devenv_fetchcontent_dependency_flags_push()
                     FetchContent_MakeAvailable("${_mb_devenv_fc_name}")
-                    mb_devenv_fetchcontent_relax_werror_pop()
+                    mb_devenv_fetchcontent_dependency_flags_pop()
                 endif()
             endforeach()
         endif()
@@ -478,9 +525,9 @@ if(EXISTS "${lockfile_candidate}")
                         "${dep_obj}"
                         "${error_prefix}"
                     )
-                    mb_devenv_fetchcontent_relax_werror_push()
+                    mb_devenv_fetchcontent_dependency_flags_push()
                     FetchContent_MakeAvailable("${name}")
-                    mb_devenv_fetchcontent_relax_werror_pop()
+                    mb_devenv_fetchcontent_dependency_flags_pop()
 
                     # Important! <PackageName>_FOUND tells CMake that `find_package` is
                     # not needed for this package anymore
