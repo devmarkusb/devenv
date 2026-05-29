@@ -332,6 +332,29 @@ Pin the callee ref (e.g. `@v1.0.0` or a commit SHA) for stability.
 Consumer repos are expected to include devenv as a git submodule at `devenv/` so the toolchain files and CMake modules
 referenced inside these workflows resolve correctly.
 
+#### Private git submodules
+
+The default `GITHUB_TOKEN` can read the repository that runs the workflow, but **not** other private repositories. If a
+submodule is private, pass an optional secret from the caller:
+
+| Secret (caller repo) | Maps to (callee)   | Required | Description                                                                 |
+| -------------------- | ------------------ | -------- | --------------------------------------------------------------------------- |
+| `SUBMODULES_PAT`     | `checkout_token`   | no       | PAT (or GitHub App token) with **read** access to private submodule repos. |
+
+Example:
+
+```yaml
+jobs:
+  ci:
+    uses: devmarkusb/devenv/.github/workflows/preset-test.yml@main
+    secrets:
+      checkout_token: ${{ secrets.SUBMODULES_PAT }}
+    with:
+      matrix_config: '[{"preset":"ci"}]'
+```
+
+When `checkout_token` is omitted, checkout uses `GITHUB_TOKEN` (fine for public submodules only).
+
 ### build-and-test.yml
 
 **Trigger:** `workflow_call`
