@@ -129,7 +129,7 @@ jobs:
     runs-on: >-
       ${{ (matrix.config.compiler == 'gcc' || startsWith(matrix.config.compiler, 'clang')) && 'ubuntu-latest'
           || (matrix.config.compiler == 'appleclang' && 'macos-latest')
-          || (matrix.config.compiler == 'msvc' && 'windows-latest') }}
+          || (matrix.config.compiler == 'msvc' && 'windows-2025-vs2026') }}
     # JSON null for host jobs (appleclang/msvc); non-null string selects the Docker image for gcc/clang.
     container: ${{ matrix.config.image && matrix.config.image || fromJSON('null') }}
     steps:

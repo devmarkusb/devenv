@@ -1,6 +1,6 @@
 name: preset test matrix
 
-# Windows + MSVC presets must set runner to a Windows hosted runner (e.g. windows-latest). Do not rely on
+# Windows + MSVC presets must set runner to a Windows hosted runner (e.g. windows-2025-vs2026). Do not rely on
 # runner defaulting to ubuntu-latest while only setting a Windows container image; MSVC setup is gated on runner.
 
 on:
@@ -12,7 +12,7 @@ on:
           Optional per entry: "setup_script" (repo-relative bash script), "setup" (inline shell), "setup_shell" (override shell).
           In Nix+Conan mode, per entry may also override "nix_packages", "conanfile", "conan_install",
           "conan_profile", "conan_install_args", "conan_output_folder".
-          For Windows/MSVC use "runner":"windows-latest" (MSVC setup uses startsWith(runner, 'windows')).
+          For Windows/MSVC use "runner":"windows-2025-vs2026" (MSVC setup uses startsWith(runner, 'windows')).
         type: string
         required: true
       use_nix_conan:
