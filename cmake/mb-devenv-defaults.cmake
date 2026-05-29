@@ -231,7 +231,10 @@ macro(mb_devenv_set_target_warnings target)
             )
         elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
             target_compile_options(${target} PRIVATE /W4)
-        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        elseif(
+            "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"
+            OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"
+        )
             target_compile_options(
                 ${target}
                 PRIVATE
