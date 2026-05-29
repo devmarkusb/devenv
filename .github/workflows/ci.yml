@@ -131,7 +131,7 @@ jobs:
 
   cmake-windows-vs2022:
     name: CMake — VS 2022 (windows)
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v6
 

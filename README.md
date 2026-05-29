@@ -371,7 +371,7 @@ When `checkout_token` is omitted, checkout uses `GITHUB_TOKEN` (fine for public 
 
 Expands a nested JSON structure into a flat compiler × version × C++ standard × stdlib × test-type matrix. Linux
 gcc/clang jobs run in `ghcr.io/bemanproject/infra-containers-<compiler>:<version>` Docker images; Apple Clang uses
-`macos-latest`; MSVC uses `windows-latest`. Supported test-type suffixes: `Default`, `TSan`, `MSan`, `MaxSan`,
+`macos-latest`; MSVC uses `windows-2025-vs2026`. Supported test-type suffixes: `Default`, `TSan`, `MSan`, `MaxSan`,
 `MaxWarn`, `MaxWarnMsvc`, `Dynamic`, `Coverage`. Coverage rows run `gcovr` and upload to [Coveralls](https://coveralls.io)
 (activate the repo at coveralls.io and results appear at `https://coveralls.io/github/<org>/<repo>`).
 
@@ -424,7 +424,7 @@ Each matrix object supports:
 | `conan_output_folder` | no       | Per-row override of workflow input `conan_output_folder` in Nix+Conan mode.               |
 
 Runs `cmake --workflow --preset <name>` for each matrix entry. Consumer setup runs after checkout and before
-CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-latest"` — MSVC setup is gated on the runner name.
+CMake/MSVC setup. For Windows/MSVC set `"runner":"windows-2025-vs2026"` — MSVC setup is gated on the runner name.
 
 With `use_nix_conan: true`, the same matrix runs inside `nix shell` after an optional `conan install`.
 Nix+Conan mode supports Linux/macOS runners only and rejects matrix `image` entries.
