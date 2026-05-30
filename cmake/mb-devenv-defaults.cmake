@@ -189,7 +189,7 @@ macro(mb_devenv_set_target_warnings target)
             target_compile_options(
                 ${target}
                 PRIVATE
-                    -fext-numeric-literals
+                    "$<$<COMPILE_LANGUAGE:CXX>:-fext-numeric-literals>"
                     -fno-omit-frame-pointer
                     $<$<NOT:$<CONFIG:Debug>>:-ftrivial-auto-var-init=zero>
             )
