@@ -3,7 +3,10 @@
 # Other library types: applies only to that target's own sources.
 function(mb_devenv_suppress_third_party_warnings target)
     if(NOT TARGET ${target})
-        message(FATAL_ERROR "mb_devenv_suppress_third_party_warnings: no target '${target}'")
+        message(
+            FATAL_ERROR
+            "mb_devenv_suppress_third_party_warnings: no target '${target}'"
+        )
     endif()
     get_target_property(_mb_devenv_tw_type ${target} TYPE)
     if(_mb_devenv_tw_type STREQUAL "INTERFACE_LIBRARY")
