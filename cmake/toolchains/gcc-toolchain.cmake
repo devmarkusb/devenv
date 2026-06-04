@@ -14,7 +14,9 @@ if(MB_DEVENV_SANITIZER STREQUAL "MaxSan")
         "-fsanitize=address -fsanitize=leak -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize-undefined-trap-on-error"
     )
 elseif(MB_DEVENV_SANITIZER STREQUAL "TSan")
-    set(SANITIZER_FLAGS "-fsanitize=thread")
+    # GCC 11+ [-Wtsan]: std::atomic_thread_fence is not modeled by TSan (e.g. Asio
+    # std_fenced_block). Builds with -Werror fail otherwise; TSan runs are still valid.
+    set(SANITIZER_FLAGS "-fsanitize=thread -Wno-tsan")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG_INIT "${SANITIZER_FLAGS}")
