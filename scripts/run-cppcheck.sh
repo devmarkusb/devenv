@@ -91,6 +91,7 @@ PY
 
 "${cppcheck_bin}" \
     --project="${compile_commands}" \
+    --relative-paths="${repo_root}" \
     --cppcheck-build-dir="${cppcheck_build_dir}" \
     "${define_args[@]}" \
     --quiet \
