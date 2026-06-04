@@ -106,7 +106,7 @@ jobs:
     runs-on: ${{ matrix.presets.runner || 'ubuntu-latest' }}
     container: ${{ !inputs.use_nix_conan && matrix.presets.image && matrix.presets.image || fromJSON('null') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           submodules: 'recursive'
           token: ${{ secrets.checkout_token || secrets.GITHUB_TOKEN }}
