@@ -2,11 +2,6 @@ name: Dependabot auto-merge
 
 on:
   workflow_call:
-    inputs:
-      fetch_metadata_version:
-        description: dependabot/fetch-metadata action ref (tag or SHA)
-        type: string
-        default: v2.5.0
 
 permissions:
   contents: write
@@ -23,7 +18,7 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@${{ inputs.fetch_metadata_version }}
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 

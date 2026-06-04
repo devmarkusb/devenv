@@ -628,9 +628,7 @@ Consumer setup runs after checkout and before the library configure step.
 
 **Trigger:** `workflow_call` (caller should run on `pull_request` and gate with `needs:` on your CI jobs).
 
-| Input                    | Required | Description                            |
-| ------------------------ | -------- | -------------------------------------- |
-| `fetch_metadata_version` | no       | fetch-metadata ref (default `v2.5.0`). |
+No inputs. `dependabot/fetch-metadata` is pinned at `v2.5.0` in the workflow.
 
 After required checks pass, enables auto-merge (squash) for Dependabot PRs that are semver patch/minor, security
 patch/minor, or pre-commit hook updates. Major bumps and other ecosystems are left for manual review.
