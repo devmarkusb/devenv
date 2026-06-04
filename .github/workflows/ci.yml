@@ -150,3 +150,17 @@ jobs:
         run: |
           cmake --preset vs2022
           cmake --build --preset vs2022-debug
+
+  dependabot-automerge:
+    needs:
+      - workflow-lint
+      - cmake-workflow-ci
+      - cmake-workflow-dev
+      - cmake-unix-makefiles
+      - cmake-clang-toolchain
+      - cmake-windows-vs2022
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    uses: devmarkusb/devenv/.github/workflows/dependabot-automerge.yml@main
