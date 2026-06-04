@@ -624,6 +624,39 @@ Configures the project with the FetchContent lockfile helper, resolves the libra
 codemodel reply, installs to `dist/`, then builds a minimal `find_package` consumer to verify the installation.
 Consumer setup runs after checkout and before the library configure step.
 
+### dependabot-automerge.yml
+
+**Trigger:** `workflow_call` (caller should run on `pull_request` and gate with `needs:` on your CI jobs).
+
+| Input                    | Required | Description                            |
+| ------------------------ | -------- | -------------------------------------- |
+| `fetch_metadata_version` | no       | fetch-metadata ref (default `v2.5.0`). |
+
+After required checks pass, enables auto-merge (squash) for Dependabot PRs that are semver patch/minor, security
+patch/minor, or pre-commit hook updates. Major bumps and other ecosystems are left for manual review.
+
+Example in the consumer `ci.yml` (set workflow-level `permissions: contents: read`; this job elevates write via the
+reusable workflow):
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  # ... preset-test, build-and-test, install-test, etc. ...
+
+  dependabot-automerge:
+    needs: [preset-test, build-and-test, install-test]
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    uses: devmarkusb/devenv/.github/workflows/dependabot-automerge.yml@main
+```
+
+Copy **`.github/dependabot.yml`** from `devenv/.github/dependabot.yml` into each consumer repo (Dependabot only reads
+the root file). Adjust schedules or limits per project if needed.
+
 ### update-pre-commit.yml
 
 **Trigger:** `workflow_call`
