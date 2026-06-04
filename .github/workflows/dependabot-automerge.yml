@@ -1,0 +1,40 @@
+name: Dependabot auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      fetch_metadata_version:
+        description: dependabot/fetch-metadata action ref (tag or SHA)
+        type: string
+        default: v2.5.0
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Dependabot auto-merge
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@${{ inputs.fetch_metadata_version }}
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Merge patch, minor, and pre-commit updates
+        if: >
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'security-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'security-update:semver-minor' ||
+          steps.metadata.outputs.package-ecosystem == 'pre_commit'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
