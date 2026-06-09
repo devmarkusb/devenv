@@ -95,7 +95,7 @@ No coverage or ctest requirement in this repo.
 - **IDE:** `.idea/` (local editor state)
 - **Consumer-local:** `CMakeUserPresets.json` (gitignored template)
 - **CI release/deploy:** none today; treat any future release workflow as restricted
-- **Binary:** `actionlint` binary in repo root (if present) — CI downloads its own copy
+- **Local tooling:** `/actionlint` (gitignored; CI downloads its own copy — install via `brew install actionlint` or the download script locally)
 
 Avoid drive-by edits to unrelated workflows or README sections.
 

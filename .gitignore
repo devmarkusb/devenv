@@ -71,3 +71,4 @@ __pycache__/
 # misc
 CMakeUserPresets.json
 *.user
+/actionlint
