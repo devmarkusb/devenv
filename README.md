@@ -659,10 +659,10 @@ the root file). Adjust schedules or limits per project if needed.
 
 **Trigger:** `workflow_call`
 
-| Secret        | Required | Description                              |
-|---------------|----------|------------------------------------------|
-| `APP_ID`      | yes      | GitHub App ID for creating the PR.       |
-| `PRIVATE_KEY` | yes      | GitHub App private key.                  |
+| Secret        | Required | Description                                                   |
+|---------------|----------|---------------------------------------------------------------|
+| `APP_ID`      | yes      | GitHub App client ID or legacy app ID for creating the PR.    |
+| `PRIVATE_KEY` | yes      | GitHub App private key.                                       |
 
 Runs `pre-commit autoupdate`, applies hooks to all files (non-blocking so the PR is still created even if hooks fail),
 opens or updates a PR via `peter-evans/create-pull-request`, adds a warning to the PR body and job summary when
