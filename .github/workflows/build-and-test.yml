@@ -57,7 +57,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.3
       - id: set-matrix
         shell: python
         env:
@@ -134,7 +134,7 @@ jobs:
     container: ${{ matrix.config.image && matrix.config.image || fromJSON('null') }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           submodules: 'recursive'
           token: ${{ secrets.checkout_token || secrets.GITHUB_TOKEN }}
