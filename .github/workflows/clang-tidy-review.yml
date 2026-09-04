@@ -131,7 +131,7 @@ jobs:
     steps:
       - &checkout_changed
         name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: 'recursive'
@@ -263,7 +263,7 @@ jobs:
     steps:
       - &checkout_full
         name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: 'recursive'
           token: ${{ secrets.checkout_token || secrets.GITHUB_TOKEN }}
