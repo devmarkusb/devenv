@@ -17,7 +17,7 @@ jobs:
   workflow-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -53,7 +53,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install CMake
         uses: lukka/get-cmake@v4.3.1
@@ -78,7 +78,7 @@ jobs:
     name: CMake — workflow preset dev (ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install CMake
         uses: lukka/get-cmake@v4.3.1
@@ -95,7 +95,7 @@ jobs:
     name: CMake — Unix Makefiles (ubuntu, no Ninja)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install CMake
         uses: lukka/get-cmake@v4.3.1
@@ -114,7 +114,7 @@ jobs:
     name: CMake — preset ci + clang toolchain (ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install CMake
         uses: lukka/get-cmake@v4.3.1
@@ -133,7 +133,7 @@ jobs:
     name: CMake — VS 2022 (windows)
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install CMake
         uses: lukka/get-cmake@v4.3.1
