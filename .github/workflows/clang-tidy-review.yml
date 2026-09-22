@@ -298,6 +298,7 @@ jobs:
           name: ${{ inputs.report_artifact_name }}
           path: ${{ runner.temp }}/clang-tidy/full-project.txt
           if-no-files-found: ignore
+          retention-days: 7
 
   full-project-nix:
     name: full project (nix+conan)
@@ -359,3 +360,4 @@ jobs:
           name: ${{ inputs.report_artifact_name }}
           path: ${{ runner.temp }}/clang-tidy/full-project.txt
           if-no-files-found: ignore
+          retention-days: 7
