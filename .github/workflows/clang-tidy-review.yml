@@ -299,7 +299,6 @@ jobs:
           path: ${{ runner.temp }}/clang-tidy/full-project.txt
           if-no-files-found: ignore
           retention-days: 7
-
   full-project-nix:
     name: full project (nix+conan)
     if: >-
