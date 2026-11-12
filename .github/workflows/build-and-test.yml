@@ -131,7 +131,12 @@ jobs:
           || (matrix.config.compiler == 'appleclang' && 'macos-latest')
           || (matrix.config.compiler == 'msvc' && 'windows-2025-vs2026') }}
     # JSON null for host jobs (appleclang/msvc); non-null string selects the Docker image for gcc/clang.
-    container: ${{ matrix.config.image && matrix.config.image || fromJSON('null') }}
+    # TSan rows need seccomp=unconfined: the Docker default profile blocks personality(),
+    # so neither the TSan runtime nor setarch can disable ASLR — TSan then aborts with
+    # "incompatible memory layout" because the host kernel uses mmap_rnd_bits=32.
+    container:
+      image: ${{ matrix.config.image && matrix.config.image || fromJSON('null') }}
+      options: ${{ matrix.config.image && contains(matrix.config.test, 'TSan') && '--security-opt seccomp=unconfined' || fromJSON('null') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
