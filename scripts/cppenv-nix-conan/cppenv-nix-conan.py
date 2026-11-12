@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 SCRIPT_NAME = Path(__file__).name
 SCRIPT_HINT = "python3 devenv/scripts/cppenv-nix-conan/cppenv-nix-conan.py"
 CONFIG_FILE = "cppenv-nix-conan.json"
