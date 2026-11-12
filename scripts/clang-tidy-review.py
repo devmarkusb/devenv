@@ -6,14 +6,13 @@ import argparse
 import concurrent.futures
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import urllib.request
-
+from pathlib import Path
 
 SOURCE_SUFFIXES = (".c", ".cc", ".cpp", ".cxx")
 HEADER_SUFFIXES = (".h", ".hh", ".hpp", ".hxx")
@@ -342,7 +341,7 @@ def list_git_files() -> list[str]:
 
 def is_translation_unit(path: str) -> bool:
     return (
-        (path.startswith("src/") or path.startswith("examples/"))
+        path.startswith(("src/", "examples/"))
         and path.endswith(SOURCE_SUFFIXES)
         and not path.endswith(EXCLUDED_TEST_SUFFIXES)
     )
@@ -372,11 +371,9 @@ def list_git_translation_units() -> list[str]:
 
 
 def is_header(path: str) -> bool:
-    return (
-        path.startswith("include/")
-        or path.startswith("src/")
-        or path.startswith("examples/")
-    ) and path.endswith(HEADER_SUFFIXES)
+    return path.startswith(("include/", "src/", "examples/")) and path.endswith(
+        HEADER_SUFFIXES
+    )
 
 
 def should_trigger_full_scan(path: str) -> bool:
@@ -384,8 +381,7 @@ def should_trigger_full_scan(path: str) -> bool:
         is_header(path)
         or path in FULL_SCAN_TRIGGER_PATHS
         or path.endswith("/CMakeLists.txt")
-        or path.startswith("cmake/")
-        or path.startswith("devenv/cmake/")
+        or path.startswith(("cmake/", "devenv/cmake/"))
     )
 
 
@@ -621,6 +617,7 @@ def run_single_clang_tidy(
         cwd=str(repo_root()),
         capture_output=True,
         text=True,
+        check=False,
     )
     return result.returncode, result.stdout, result.stderr
 
