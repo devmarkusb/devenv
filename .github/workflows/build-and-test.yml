@@ -222,7 +222,13 @@ jobs:
           case $test_type in
             Default) ;;
             TSan)
-              echo "cmake_extra_args=-DMB_DEVENV_SANITIZER=TSan" >> "$GITHUB_OUTPUT" ;;
+              echo "cmake_extra_args=-DMB_DEVENV_SANITIZER=TSan" >> "$GITHUB_OUTPUT"
+              # TSan aborts with "incompatible memory layout" when the host kernel's
+              # ASLR entropy is too high (vm.mmap_rnd_bits > 28) and the sanitizer
+              # runtime cannot disable ASLR itself inside the CI container. Run the
+              # build (gtest discovery executes the test binary) and tests with ASLR
+              # disabled via a personality(ADDR_NO_RANDOMIZE) wrapper.
+              echo "run_prefix=setarch \$(uname -m) -R" >> "$GITHUB_OUTPUT" ;;
             MSan)
               echo "cmake_extra_args=-DMB_DEVENV_SANITIZER=MSan" >> "$GITHUB_OUTPUT" ;;
             MaxSan)
@@ -258,13 +264,13 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cmake --build build --config ${{ steps.vars.outputs.build_config }} --parallel --verbose
+          ${{ steps.vars.outputs.run_prefix }} cmake --build build --config ${{ steps.vars.outputs.build_config }} --parallel --verbose
           cmake --build build --config ${{ steps.vars.outputs.build_config }} --target all_verify_interface_header_sets
           cmake --install build --config ${{ steps.vars.outputs.build_config }} --prefix /opt/namespace.component
           ls -R /opt/namespace.component
       - name: Test
         shell: bash
-        run: ctest --test-dir build --build-config ${{ steps.vars.outputs.build_config }} --output-on-failure
+        run: ${{ steps.vars.outputs.run_prefix }} ctest --test-dir build --build-config ${{ steps.vars.outputs.build_config }} --output-on-failure
       - name: Generate Coverage Files
         if: steps.vars.outputs.test_type == 'Coverage' && github.event_name != 'schedule'
         shell: bash
