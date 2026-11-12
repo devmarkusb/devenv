@@ -1,0 +1,37 @@
+name: TSan container probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-host:
+    name: Host (no container)
+    runs-on: ubuntu-latest
+    steps:
+      - name: ASLR + personality on host
+        shell: bash
+        run: |
+          echo "mmap_rnd_bits: $(cat /proc/sys/vm/mmap_rnd_bits)"
+          uname -r
+          setarch "$(uname -m)" -R true && echo "setarch on host: OK" || echo "setarch on host: FAILED"
+          sudo sysctl -w vm.mmap_rnd_bits=28 && echo "host sysctl: OK"
+          echo "mmap_rnd_bits now: $(cat /proc/sys/vm/mmap_rnd_bits)"
+
+  probe-container:
+    name: Container (gcc:15)
+    runs-on: ubuntu-latest
+    container: ghcr.io/bemanproject/infra-containers-gcc:15
+    steps:
+      - name: ASLR + personality in container
+        shell: bash
+        run: |
+          echo "mmap_rnd_bits: $(cat /proc/sys/vm/mmap_rnd_bits)"
+          uname -r
+          id
+          setarch "$(uname -m)" -R true && echo "setarch in container: OK" || echo "setarch in container: FAILED"
+          sysctl -w vm.mmap_rnd_bits=28 && echo "container sysctl: OK" || echo "container sysctl: FAILED"
+          echo 28 > /proc/sys/vm/mmap_rnd_bits 2>&1 && echo "container /proc/sys write: OK" || echo "container /proc/sys write: FAILED"
+          echo "mmap_rnd_bits now: $(cat /proc/sys/vm/mmap_rnd_bits)"
