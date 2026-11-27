@@ -137,7 +137,7 @@ jobs:
       - *setup_dependencies
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           nix_path: ${{ inputs.nix_path }}
 
